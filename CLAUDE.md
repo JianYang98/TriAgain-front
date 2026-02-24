@@ -95,6 +95,7 @@ lib/
 │   │   ├── screens/
 │   │   │   ├── create_crew_screen.dart
 │   │   │   ├── crew_success_screen.dart
+│   │   │   ├── crew_confirm_screen.dart
 │   │   │   └── crew_detail_screen.dart
 │   │   └── widgets/
 │   │       ├── my_verification_tab.dart
@@ -129,6 +130,7 @@ lib/
 | 4 | 크루 생성 완료 | crew_success_screen.dart | 초대코드 + 복사/공유 버튼 |
 | 5 | 크루 상세 | crew_detail_screen.dart | 탭 3개 (나의 인증 / 참가자 현황 / 인증 피드) |
 | 6 | 인증하기 | verification_screen.dart | 사진 영역 + 텍스트 입력 + 인증 완료 |
+| 7 | 크루 확인 | crew_confirm_screen.dart | 초대코드 입력 후 크루 정보 확인 + 참여 |
 
 ---
 
@@ -138,7 +140,7 @@ lib/
 로그인 → 홈 → 크루 만들기 → 생성 완료 → 홈
 홈 → 크루 카드 클릭 → 크루 상세 (탭 3개)
 크루 상세 → 오늘 인증하기 → 인증하기 화면
-홈 → 초대코드 버튼 → 코드 입력 → 크루 참여
+홈 → 초대코드 버튼 → 코드 입력 → 크루 확인 → 크루 참여 → 홈
 ```
 
 ---

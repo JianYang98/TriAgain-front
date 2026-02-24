@@ -130,8 +130,18 @@ class HomeScreen extends StatelessWidget {
             ),
             TextButton(
               onPressed: () {
+                final code = controller.text.trim();
                 Navigator.of(dialogContext).pop();
-                // TODO: 초대코드로 크루 참여 로직
+                final crew = MockData.findByInviteCode(code);
+                if (crew != null) {
+                  context.push('/crew/confirm?crewId=${crew.id}');
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('유효하지 않은 초대코드입니다'),
+                    ),
+                  );
+                }
               },
               child: Text(
                 '참여하기',

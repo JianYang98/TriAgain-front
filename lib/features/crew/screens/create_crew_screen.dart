@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:triagain/core/constants/app_colors.dart';
 import 'package:triagain/core/constants/app_sizes.dart';
@@ -18,7 +17,7 @@ class CreateCrewScreen extends StatefulWidget {
 class _CreateCrewScreenState extends State<CreateCrewScreen> {
   final _nameController = TextEditingController();
   final _goalController = TextEditingController();
-  final _maxMembersController = TextEditingController();
+  int _maxMembers = 5;
   DateTime? _startDate;
   DateTime? _endDate;
   VerificationType _verificationType = VerificationType.photoRequired;
@@ -28,7 +27,6 @@ class _CreateCrewScreenState extends State<CreateCrewScreen> {
   void dispose() {
     _nameController.dispose();
     _goalController.dispose();
-    _maxMembersController.dispose();
     super.dispose();
   }
 
@@ -114,38 +112,56 @@ class _CreateCrewScreenState extends State<CreateCrewScreen> {
 
                     // 최대 인원
                     _buildSection(
-                      label: '최대 인원 (1~10명)',
-                      child: TextField(
-                        controller: _maxMembersController,
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
+                      label: '최대 인원',
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          GestureDetector(
+                            onTap: _maxMembers > 2
+                                ? () => setState(() => _maxMembers--)
+                                : null,
+                            child: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(color: AppColors.grey1),
+                              ),
+                              child: Icon(
+                                Icons.remove,
+                                color: _maxMembers > 2
+                                    ? AppColors.white
+                                    : AppColors.grey2,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            '$_maxMembers명',
+                            style: AppTextStyles.heading2
+                                .copyWith(color: AppColors.white),
+                          ),
+                          GestureDetector(
+                            onTap: _maxMembers < 10
+                                ? () => setState(() => _maxMembers++)
+                                : null,
+                            child: Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(color: AppColors.grey1),
+                              ),
+                              child: Icon(
+                                Icons.add,
+                                color: _maxMembers < 10
+                                    ? AppColors.white
+                                    : AppColors.grey2,
+                                size: 20,
+                              ),
+                            ),
+                          ),
                         ],
-                        style: AppTextStyles.body1
-                            .copyWith(color: AppColors.white),
-                        decoration: InputDecoration(
-                          hintText: '최대 인원을 입력하세요',
-                          hintStyle: AppTextStyles.body1
-                              .copyWith(color: AppColors.grey3),
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                        onChanged: (value) {
-                          if (value.isEmpty) return;
-                          final number = int.tryParse(value);
-                          if (number == null) return;
-                          final clamped = number.clamp(1, 10);
-                          if (clamped != number) {
-                            _maxMembersController.text = clamped.toString();
-                            _maxMembersController.selection =
-                                TextSelection.fromPosition(
-                              TextPosition(
-                                  offset:
-                                      _maxMembersController.text.length),
-                            );
-                          }
-                        },
                       ),
                     ),
                     const SizedBox(height: AppSizes.paddingSM),

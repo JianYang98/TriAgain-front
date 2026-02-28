@@ -24,7 +24,10 @@ final router = GoRouter(
     ),
     GoRoute(
       path: '/crew/success',
-      builder: (context, state) => const CrewSuccessScreen(),
+      builder: (context, state) => CrewSuccessScreen(
+        inviteCode: state.uri.queryParameters['inviteCode'] ?? '',
+        startDate: state.uri.queryParameters['startDate'] ?? '',
+      ),
     ),
     GoRoute(
       path: '/crew/confirm',
@@ -42,6 +45,7 @@ final router = GoRouter(
       path: '/verification',
       builder: (context, state) => VerificationScreen(
         crewId: state.uri.queryParameters['crewId'] ?? '',
+        challengeId: state.uri.queryParameters['challengeId'] ?? '',
       ),
     ),
   ],

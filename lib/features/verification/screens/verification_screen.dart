@@ -1,25 +1,36 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:uuid/uuid.dart';
 import 'package:triagain/core/constants/app_colors.dart';
 import 'package:triagain/core/constants/app_sizes.dart';
 import 'package:triagain/core/constants/app_text_styles.dart';
+import 'package:triagain/core/network/api_exception.dart';
 import 'package:triagain/models/crew.dart';
-import 'package:triagain/models/mock_data.dart';
+import 'package:triagain/providers/crew_provider.dart';
+import 'package:triagain/providers/verification_provider.dart';
+import 'package:triagain/services/verification_service.dart';
 import 'package:triagain/widgets/app_button.dart';
 
-class VerificationScreen extends StatefulWidget {
+class VerificationScreen extends ConsumerStatefulWidget {
   final String crewId;
+  final String challengeId;
 
-  const VerificationScreen({super.key, required this.crewId});
+  const VerificationScreen({
+    super.key,
+    required this.crewId,
+    required this.challengeId,
+  });
 
   @override
-  State<VerificationScreen> createState() => _VerificationScreenState();
+  ConsumerState<VerificationScreen> createState() =>
+      _VerificationScreenState();
 }
 
-class _VerificationScreenState extends State<VerificationScreen> {
+class _VerificationScreenState extends ConsumerState<VerificationScreen> {
   final _textController = TextEditingController();
   final _imagePicker = ImagePicker();
   File? _selectedImage;
@@ -32,12 +43,11 @@ class _VerificationScreenState extends State<VerificationScreen> {
   }
 
   bool get _isPhotoRequired {
-    try {
-      final crew = MockData.crews.firstWhere((c) => c.id == widget.crewId);
-      return crew.verificationType == VerificationType.photoRequired;
-    } catch (_) {
-      return false;
-    }
+    final crewAsync = ref.read(crewDetailProvider(widget.crewId));
+    return crewAsync.whenOrNull(
+          data: (crew) => crew.verificationType == VerificationType.photo,
+        ) ??
+        false;
   }
 
   Future<void> _pickImage(ImageSource source) async {
@@ -83,7 +93,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
   Future<void> _handleSubmit() async {
     if (_isPhotoRequired && _selectedImage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text('사진 인증이 필요합니다'),
           backgroundColor: AppColors.error,
         ),
@@ -93,32 +103,50 @@ class _VerificationScreenState extends State<VerificationScreen> {
 
     setState(() => _isSubmitting = true);
 
-    // Mock 딜레이
-    await Future.delayed(const Duration(milliseconds: 800));
+    try {
+      final verificationService = ref.read(verificationServiceProvider);
+      final idempotencyKey = const Uuid().v4();
+      final textContent = _textController.text.trim();
 
-    if (!mounted) return;
+      // 텍스트 인증만 (사진 업로드는 3단계에서 구현)
+      await verificationService.createVerification(
+        challengeId: widget.challengeId,
+        textContent: textContent.isNotEmpty ? textContent : null,
+        idempotencyKey: idempotencyKey,
+      );
 
-    setState(() => _isSubmitting = false);
+      // 피드 갱신
+      ref.invalidate(feedProvider(widget.crewId));
 
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppColors.card,
-        content: Text(
-          '인증이 완료되었습니다! 🎉',
-          style: AppTextStyles.body1.copyWith(color: AppColors.white),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.pop();
-            },
-            child: Text('확인', style: TextStyle(color: AppColors.main)),
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          backgroundColor: AppColors.card,
+          content: Text(
+            '인증이 완료되었습니다! 🎉',
+            style: AppTextStyles.body1.copyWith(color: AppColors.white),
           ),
-        ],
-      ),
-    );
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                context.pop();
+              },
+              child: Text('확인', style: TextStyle(color: AppColors.main)),
+            ),
+          ],
+        ),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   @override

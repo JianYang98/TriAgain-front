@@ -1,27 +1,48 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:triagain/core/constants/app_colors.dart';
 import 'package:triagain/core/constants/app_sizes.dart';
 import 'package:triagain/core/constants/app_text_styles.dart';
+import 'package:triagain/core/network/api_exception.dart';
 import 'package:triagain/models/crew.dart';
+import 'package:triagain/providers/crew_provider.dart';
+import 'package:triagain/services/crew_service.dart';
 import 'package:triagain/widgets/app_button.dart';
 import 'package:triagain/widgets/toggle_selector.dart';
 
-class CreateCrewScreen extends StatefulWidget {
+class CreateCrewScreen extends ConsumerStatefulWidget {
   const CreateCrewScreen({super.key});
 
   @override
-  State<CreateCrewScreen> createState() => _CreateCrewScreenState();
+  ConsumerState<CreateCrewScreen> createState() => _CreateCrewScreenState();
 }
 
-class _CreateCrewScreenState extends State<CreateCrewScreen> {
+class _CreateCrewScreenState extends ConsumerState<CreateCrewScreen> {
+  static const _minDurationDays = 6; // 작심삼일 최소 2회
+
   final _nameController = TextEditingController();
   final _goalController = TextEditingController();
   int _maxMembers = 5;
-  DateTime? _startDate;
+  late DateTime _startDate;
   DateTime? _endDate;
-  VerificationType _verificationType = VerificationType.photoRequired;
-  bool _allowMidJoin = false;
+  VerificationType _verificationType = VerificationType.photo;
+  bool _allowLateJoin = false;
+  bool _isSubmitting = false;
+
+  DateTime get _tomorrow {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day + 1);
+  }
+
+  DateTime get _minEndDate =>
+      _startDate.add(const Duration(days: _minDurationDays));
+
+  @override
+  void initState() {
+    super.initState();
+    _startDate = _tomorrow;
+  }
 
   @override
   void dispose() {
@@ -30,13 +51,56 @@ class _CreateCrewScreenState extends State<CreateCrewScreen> {
     super.dispose();
   }
 
+  Future<void> _handleCreate() async {
+    final name = _nameController.text.trim();
+    final goal = _goalController.text.trim();
+
+    if (name.isEmpty || goal.isEmpty || _endDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('모든 항목을 입력해주세요')),
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      final crewService = ref.read(crewServiceProvider);
+      final result = await crewService.createCrew(
+        name: name,
+        goal: goal,
+        verificationType: _verificationType,
+        maxMembers: _maxMembers,
+        startDate: _startDate,
+        endDate: _endDate!,
+        allowLateJoin: _allowLateJoin,
+      );
+
+      ref.invalidate(crewListProvider);
+
+      if (!mounted) return;
+
+      final dateStr =
+          '${result.startDate.year}.${result.startDate.month.toString().padLeft(2, '0')}.${result.startDate.day.toString().padLeft(2, '0')}';
+      context.go(
+          '/crew/success?inviteCode=${result.inviteCode}&startDate=$dateStr');
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
-            // 상단 헤더: ← 뒤로가기 + "크루 만들기"
+            // 상단 헤더
             Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: AppSizes.paddingMD,
@@ -72,7 +136,6 @@ class _CreateCrewScreenState extends State<CreateCrewScreen> {
                   children: [
                     const SizedBox(height: AppSizes.paddingSM),
 
-                    // 크루 이름
                     _buildSection(
                       label: '크루 이름',
                       child: TextField(
@@ -91,7 +154,6 @@ class _CreateCrewScreenState extends State<CreateCrewScreen> {
                     ),
                     const SizedBox(height: AppSizes.paddingSM),
 
-                    // 목표
                     _buildSection(
                       label: '목표',
                       child: TextField(
@@ -110,7 +172,6 @@ class _CreateCrewScreenState extends State<CreateCrewScreen> {
                     ),
                     const SizedBox(height: AppSizes.paddingSM),
 
-                    // 최대 인원
                     _buildSection(
                       label: '최대 인원',
                       child: Row(
@@ -166,7 +227,6 @@ class _CreateCrewScreenState extends State<CreateCrewScreen> {
                     ),
                     const SizedBox(height: AppSizes.paddingSM),
 
-                    // 시작일 / 종료일
                     Row(
                       children: [
                         Expanded(
@@ -180,9 +240,7 @@ class _CreateCrewScreenState extends State<CreateCrewScreen> {
                                     child: Text(
                                       _formatDate(_startDate),
                                       style: AppTextStyles.body1.copyWith(
-                                        color: _startDate != null
-                                            ? AppColors.white
-                                            : AppColors.grey3,
+                                        color: AppColors.white,
                                       ),
                                     ),
                                   ),
@@ -228,15 +286,14 @@ class _CreateCrewScreenState extends State<CreateCrewScreen> {
                     ),
                     const SizedBox(height: AppSizes.paddingSM),
 
-                    // 인증 방식
                     _buildSection(
                       label: '인증 방식',
                       child: ToggleSelector<VerificationType>(
                         items: VerificationType.values,
                         selectedItem: _verificationType,
                         labelBuilder: (type) => switch (type) {
-                          VerificationType.textOnly => '📝 텍스트만',
-                          VerificationType.photoRequired => '📸 사진 필수',
+                          VerificationType.text => '📝 텍스트만',
+                          VerificationType.photo => '📸 사진 필수',
                         },
                         onChanged: (type) {
                           setState(() => _verificationType = type);
@@ -245,15 +302,14 @@ class _CreateCrewScreenState extends State<CreateCrewScreen> {
                     ),
                     const SizedBox(height: AppSizes.paddingSM),
 
-                    // 중간 가입
                     _buildSection(
                       label: '중간 가입',
                       child: ToggleSelector<bool>(
                         items: const [true, false],
-                        selectedItem: _allowMidJoin,
+                        selectedItem: _allowLateJoin,
                         labelBuilder: (value) => value ? '허용' : '불가',
                         onChanged: (value) {
-                          setState(() => _allowMidJoin = value);
+                          setState(() => _allowLateJoin = value);
                         },
                       ),
                     ),
@@ -273,7 +329,8 @@ class _CreateCrewScreenState extends State<CreateCrewScreen> {
               ),
               child: AppButton(
                 text: '크루 생성하기 🚀',
-                onPressed: () => context.push('/crew/success'),
+                isLoading: _isSubmitting,
+                onPressed: _handleCreate,
               ),
             ),
           ],
@@ -309,14 +366,26 @@ class _CreateCrewScreenState extends State<CreateCrewScreen> {
   }
 
   Future<void> _pickDate({required bool isStart}) async {
-    final now = DateTime.now();
+    final lastDate = DateTime.now().add(const Duration(days: 365));
+
+    final DateTime firstDate;
+    final DateTime initialDate;
+
+    if (isStart) {
+      firstDate = _tomorrow;
+      initialDate = _startDate;
+    } else {
+      firstDate = _minEndDate;
+      initialDate = _endDate != null && !_endDate!.isBefore(_minEndDate)
+          ? _endDate!
+          : _minEndDate;
+    }
+
     final picked = await showDatePicker(
       context: context,
-      initialDate: isStart
-          ? (_startDate ?? now)
-          : (_endDate ?? _startDate ?? now),
-      firstDate: now,
-      lastDate: now.add(const Duration(days: 365)),
+      initialDate: initialDate,
+      firstDate: firstDate,
+      lastDate: lastDate,
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -334,6 +403,10 @@ class _CreateCrewScreenState extends State<CreateCrewScreen> {
       setState(() {
         if (isStart) {
           _startDate = picked;
+          // 종료일이 새 시작일+6일 미만이면 리셋
+          if (_endDate != null && _endDate!.isBefore(_minEndDate)) {
+            _endDate = null;
+          }
         } else {
           _endDate = picked;
         }

@@ -3,31 +3,17 @@ import 'package:flutter/services.dart';
 import 'package:triagain/core/constants/app_colors.dart';
 import 'package:triagain/core/constants/app_sizes.dart';
 import 'package:triagain/core/constants/app_text_styles.dart';
-import 'package:triagain/models/challenge.dart';
 import 'package:triagain/models/crew.dart';
-import 'package:triagain/models/mock_data.dart';
 import 'package:triagain/widgets/app_card.dart';
 
 class CrewInfoBottomSheet extends StatelessWidget {
-  final Crew crew;
+  final CrewDetail crew;
 
   const CrewInfoBottomSheet({super.key, required this.crew});
 
   @override
   Widget build(BuildContext context) {
-    final activeChallenge = MockData.challenges.where(
-      (c) =>
-          c.crewId == crew.id &&
-          c.status == ChallengeStatus.inProgress,
-    );
-    final endDate = activeChallenge.isNotEmpty
-        ? activeChallenge.first.endDate
-        : crew.createdAt.add(Duration(days: crew.durationDays));
-    final startDate = activeChallenge.isNotEmpty
-        ? activeChallenge.first.startDate
-        : crew.createdAt;
-    final remaining = endDate.difference(DateTime.now()).inDays;
-    final members = MockData.crewMembers;
+    final remaining = crew.endDate.difference(DateTime.now()).inDays;
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.85,
@@ -61,7 +47,7 @@ class CrewInfoBottomSheet extends StatelessWidget {
                 children: [
                   const SizedBox(height: AppSizes.paddingSM),
                   Text(
-                    '🏃 ${crew.name}',
+                    crew.name,
                     style: AppTextStyles.heading1.copyWith(
                       color: AppColors.white,
                     ),
@@ -73,13 +59,13 @@ class CrewInfoBottomSheet extends StatelessWidget {
 
                   _buildInfoCard(
                     '기간',
-                    '${_formatDate(startDate)} ~ ${_formatDate(endDate)} ($remaining일 남음)',
+                    '${_formatDate(crew.startDate)} ~ ${_formatDate(crew.endDate)} ($remaining일 남음)',
                   ),
                   const SizedBox(height: 12),
 
                   _buildInfoCard(
                     '인증 방식',
-                    crew.verificationType == VerificationType.photoRequired
+                    crew.verificationType == VerificationType.photo
                         ? '📷 사진 필수'
                         : '✏️ 텍스트만',
                   ),
@@ -87,7 +73,7 @@ class CrewInfoBottomSheet extends StatelessWidget {
 
                   _buildInfoCard(
                     '중간 가입',
-                    crew.allowMidJoin ? '✅ 가능' : '❌ 불가',
+                    crew.allowLateJoin ? '✅ 가능' : '❌ 불가',
                   ),
                   const SizedBox(height: AppSizes.paddingLG),
 
@@ -101,11 +87,8 @@ class CrewInfoBottomSheet extends StatelessWidget {
 
                   AppCard(
                     child: Column(
-                      children: members
-                          .map((m) => _buildMemberRow(
-                                m['name'] as String,
-                                m['isLeader'] as bool,
-                              ))
+                      children: crew.members
+                          .map((m) => _buildMemberRow(m))
                           .toList(),
                     ),
                   ),
@@ -210,7 +193,7 @@ class CrewInfoBottomSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildMemberRow(String name, bool isLeader) {
+  Widget _buildMemberRow(CrewMember member) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSizes.paddingXS),
       child: Row(
@@ -226,10 +209,10 @@ class CrewInfoBottomSheet extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Text(
-            name,
+            member.userId,
             style: AppTextStyles.body1.copyWith(color: AppColors.white),
           ),
-          if (isLeader) ...[
+          if (member.isLeader) ...[
             const SizedBox(width: AppSizes.paddingSM),
             Container(
               padding: const EdgeInsets.symmetric(

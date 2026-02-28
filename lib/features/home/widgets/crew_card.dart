@@ -6,7 +6,7 @@ import 'package:triagain/models/crew.dart';
 import 'package:triagain/widgets/app_card.dart';
 
 class CrewCard extends StatelessWidget {
-  final Crew crew;
+  final CrewSummary crew;
   final VoidCallback? onTap;
 
   const CrewCard({
@@ -22,11 +22,18 @@ class CrewCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            crew.name,
-            style: AppTextStyles.heading3.copyWith(
-              color: AppColors.white,
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  crew.name,
+                  style: AppTextStyles.heading3.copyWith(
+                    color: AppColors.white,
+                  ),
+                ),
+              ),
+              _buildStatusBadge(),
+            ],
           ),
           const SizedBox(height: AppSizes.paddingSM),
           Text(
@@ -34,16 +41,19 @@ class CrewCard extends StatelessWidget {
             style: AppTextStyles.body2.copyWith(color: AppColors.grey3),
           ),
           const SizedBox(height: AppSizes.paddingMD),
-          _buildProgressBar(),
-          const SizedBox(height: AppSizes.paddingSM),
           Row(
             children: [
+              Icon(Icons.people_outline, color: AppColors.grey3, size: 16),
+              const SizedBox(width: 4),
               Text(
-                'Day ${crew.currentDay}/3',
-                style: AppTextStyles.body2.copyWith(color: AppColors.white),
+                '${crew.currentMembers}/${crew.maxMembers}명',
+                style: AppTextStyles.body2.copyWith(color: AppColors.grey3),
               ),
               const Spacer(),
-              _buildRoundBadge(),
+              Text(
+                '${_formatDate(crew.startDate)} ~ ${_formatDate(crew.endDate)}',
+                style: AppTextStyles.caption.copyWith(color: AppColors.grey3),
+              ),
             ],
           ),
         ],
@@ -51,36 +61,27 @@ class CrewCard extends StatelessWidget {
     );
   }
 
-  Widget _buildProgressBar() {
-    return Row(
-      children: List.generate(3, (index) {
-        return Expanded(
-          child: Container(
-            height: 6,
-            margin: EdgeInsets.only(right: index < 2 ? 6 : 0),
-            decoration: BoxDecoration(
-              color: index < crew.currentDay
-                  ? AppColors.main
-                  : AppColors.grey2,
-              borderRadius: BorderRadius.circular(3),
-            ),
-          ),
-        );
-      }),
-    );
-  }
+  Widget _buildStatusBadge() {
+    final (color, bgColor) = switch (crew.status) {
+      CrewStatus.recruiting => (AppColors.warning, AppColors.warning),
+      CrewStatus.active => (AppColors.success, AppColors.success),
+      CrewStatus.completed => (AppColors.grey3, AppColors.grey3),
+    };
 
-  Widget _buildRoundBadge() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.main.withValues(alpha: 0.2),
+        color: bgColor.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(AppSizes.badgeRadius),
       ),
       child: Text(
-        '작심삼일 ${crew.round}번째 🔥',
-        style: AppTextStyles.caption.copyWith(color: AppColors.main),
+        crew.status.label,
+        style: AppTextStyles.caption.copyWith(color: color),
       ),
     );
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.month.toString().padLeft(2, '0')}.${date.day.toString().padLeft(2, '0')}';
   }
 }

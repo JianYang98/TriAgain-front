@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:triagain/core/constants/app_colors.dart';
 import 'package:triagain/core/constants/app_sizes.dart';
@@ -8,9 +9,9 @@ import 'package:triagain/features/crew/widgets/feed_tab.dart';
 import 'package:triagain/features/crew/widgets/member_status_tab.dart';
 import 'package:triagain/features/crew/widgets/crew_info_bottom_sheet.dart';
 import 'package:triagain/features/crew/widgets/my_verification_tab.dart';
-import 'package:triagain/models/mock_data.dart';
+import 'package:triagain/providers/crew_provider.dart';
 
-class CrewDetailScreen extends StatelessWidget {
+class CrewDetailScreen extends ConsumerWidget {
   final String crewId;
 
   const CrewDetailScreen({
@@ -19,18 +20,71 @@ class CrewDetailScreen extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final crew = MockData.crews.firstWhere((c) => c.id == crewId);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final crewAsync = ref.watch(crewDetailProvider(crewId));
 
-    String motivationText;
-    if (crew.currentDay == 1) {
-      motivationText = '새로운 도전 시작!';
-    } else if (crew.currentDay == 2) {
-      motivationText = '오늘만 하면 달성!';
-    } else {
-      motivationText = '마지막 날! 화이팅!';
-    }
+    return crewAsync.when(
+      data: (crew) => _buildScreen(context, ref, crew),
+      loading: () => Scaffold(
+        backgroundColor: AppColors.background,
+        body: const Center(
+          child: CircularProgressIndicator(color: AppColors.main),
+        ),
+      ),
+      error: (error, _) => Scaffold(
+        backgroundColor: AppColors.background,
+        body: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSizes.paddingMD,
+                  vertical: AppSizes.paddingSM,
+                ),
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () => context.pop(),
+                      child: const Icon(
+                        Icons.arrow_back,
+                        color: AppColors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        '크루 정보를 불러올 수 없습니다',
+                        style: AppTextStyles.body1
+                            .copyWith(color: AppColors.grey3),
+                      ),
+                      const SizedBox(height: AppSizes.paddingSM),
+                      TextButton(
+                        onPressed: () =>
+                            ref.invalidate(crewDetailProvider(crewId)),
+                        child: Text(
+                          '다시 시도',
+                          style: AppTextStyles.body2
+                              .copyWith(color: AppColors.main),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
+  Widget _buildScreen(BuildContext context, WidgetRef ref, CrewDetail crew) {
     return DefaultTabController(
       length: 3,
       child: Scaffold(
@@ -88,14 +142,14 @@ class CrewDetailScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '작심삼일 ${crew.round}번째 🔥',
+                        crew.status.label,
                         style: AppTextStyles.heading3.copyWith(
                           color: AppColors.white,
                         ),
                       ),
                       const SizedBox(height: AppSizes.paddingXS),
                       Text(
-                        motivationText,
+                        crew.goal,
                         style: AppTextStyles.body2.copyWith(
                           color: AppColors.white.withValues(alpha: 0.8),
                         ),
@@ -141,7 +195,7 @@ class CrewDetailScreen extends StatelessWidget {
     );
   }
 
-  void _showCrewInfoSheet(BuildContext context, Crew crew) {
+  void _showCrewInfoSheet(BuildContext context, CrewDetail crew) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,

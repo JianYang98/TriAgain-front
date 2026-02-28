@@ -1,24 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:triagain/core/constants/app_colors.dart';
 import 'package:triagain/core/constants/app_sizes.dart';
 import 'package:triagain/core/constants/app_text_styles.dart';
 import 'package:triagain/models/crew.dart';
-import 'package:triagain/models/mock_data.dart';
+import 'package:triagain/providers/crew_provider.dart';
 import 'package:triagain/widgets/app_button.dart';
 import 'package:triagain/widgets/app_card.dart';
 
-class CrewConfirmScreen extends StatelessWidget {
+class CrewConfirmScreen extends ConsumerWidget {
   final String crewId;
 
   const CrewConfirmScreen({super.key, required this.crewId});
 
   @override
-  Widget build(BuildContext context) {
-    final crew = MockData.crews.firstWhere((c) => c.id == crewId);
-    final members = MockData.crewMembers;
-    final endDate = crew.createdAt.add(Duration(days: 15));
-    final remaining = endDate.difference(DateTime.now()).inDays;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final crewAsync = ref.watch(crewDetailProvider(crewId));
 
     return Scaffold(
       body: SafeArea(
@@ -50,142 +48,129 @@ class CrewConfirmScreen extends StatelessWidget {
               ),
             ),
 
-            // 스크롤 콘텐츠
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSizes.paddingMD,
+              child: crewAsync.when(
+                data: (crew) => _buildContent(context, crew),
+                loading: () => const Center(
+                  child: CircularProgressIndicator(color: AppColors.main),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: AppSizes.paddingMD),
-                    Text(
-                      '🏃 ${crew.name}',
-                      style: AppTextStyles.heading1
-                          .copyWith(color: AppColors.white),
-                    ),
-                    const SizedBox(height: AppSizes.paddingLG),
-
-                    // 목표
-                    _buildInfoCard('목표', crew.goal),
-                    const SizedBox(height: 12),
-
-                    // 기간
-                    _buildInfoCard(
-                      '기간',
-                      '${_formatDate(crew.createdAt)} ~ ${_formatDate(endDate)} ($remaining일 남음)',
-                    ),
-                    const SizedBox(height: 12),
-
-                    // 인증 방식
-                    _buildInfoCard(
-                      '인증 방식',
-                      crew.verificationType == VerificationType.photoRequired
-                          ? '📷 사진 필수'
-                          : '✏️ 텍스트만',
-                    ),
-                    const SizedBox(height: 12),
-
-                    // 중간 가입
-                    _buildInfoCard(
-                      '중간 가입',
-                      crew.allowMidJoin ? '✅ 가능' : '❌ 불가',
-                    ),
-                    const SizedBox(height: AppSizes.paddingLG),
-
-                    // 크루원 섹션
-                    Text(
-                      '크루원 (${crew.currentMembers}/${crew.maxMembers})',
-                      style: AppTextStyles.heading3
-                          .copyWith(color: AppColors.white),
-                    ),
-                    const SizedBox(height: AppSizes.paddingSM),
-                    AppCard(
-                      child: Column(
-                        children: members
-                            .map((m) => _buildMemberRow(
-                                  m['name'] as String,
-                                  m['isLeader'] as bool,
-                                ))
-                            .toList(),
+                error: (error, _) => Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        '크루 정보를 불러올 수 없습니다',
+                        style: AppTextStyles.body1
+                            .copyWith(color: AppColors.grey3),
                       ),
-                    ),
-                    const SizedBox(height: AppSizes.paddingLG),
-                  ],
+                      const SizedBox(height: AppSizes.paddingSM),
+                      TextButton(
+                        onPressed: () =>
+                            ref.invalidate(crewDetailProvider(crewId)),
+                        child: Text(
+                          '다시 시도',
+                          style: AppTextStyles.body2
+                              .copyWith(color: AppColors.main),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ),
-
-            // 하단 버튼
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSizes.paddingMD,
-              ),
-              child: Column(
-                children: [
-                  AppButton(
-                    text: '크루 참여하기! 🚀',
-                    onPressed: () {
-                      if (crew.currentMembers >= crew.maxMembers) {
-                        showDialog(
-                          context: context,
-                          builder: (_) => AlertDialog(
-                            backgroundColor: AppColors.card,
-                            content: Text(
-                              '정원이 다찼습니다.',
-                              style: AppTextStyles.body1
-                                  .copyWith(color: AppColors.white),
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                child: Text('확인',
-                                    style: TextStyle(color: AppColors.main)),
-                              ),
-                            ],
-                          ),
-                        );
-                      } else {
-                        showDialog(
-                          context: context,
-                          builder: (_) => AlertDialog(
-                            backgroundColor: AppColors.card,
-                            content: Text(
-                              '크루에 가입되었습니다!',
-                              style: AppTextStyles.body1
-                                  .copyWith(color: AppColors.white),
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.pop(context);
-                                  context.go('/home');
-                                },
-                                child: Text('확인',
-                                    style: TextStyle(color: AppColors.main)),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
-                    },
-                  ),
-                  TextButton(
-                    onPressed: () => context.pop(),
-                    child: Text(
-                      '나중에',
-                      style: AppTextStyles.body1
-                          .copyWith(color: AppColors.grey3),
-                    ),
-                  ),
-                  const SizedBox(height: AppSizes.paddingSM),
-                ],
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildContent(BuildContext context, CrewDetail crew) {
+    final remaining = crew.endDate.difference(DateTime.now()).inDays;
+
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSizes.paddingMD,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: AppSizes.paddingMD),
+                Text(
+                  crew.name,
+                  style: AppTextStyles.heading1
+                      .copyWith(color: AppColors.white),
+                ),
+                const SizedBox(height: AppSizes.paddingLG),
+
+                _buildInfoCard('목표', crew.goal),
+                const SizedBox(height: 12),
+
+                _buildInfoCard(
+                  '기간',
+                  '${_formatDate(crew.startDate)} ~ ${_formatDate(crew.endDate)} ($remaining일 남음)',
+                ),
+                const SizedBox(height: 12),
+
+                _buildInfoCard(
+                  '인증 방식',
+                  crew.verificationType == VerificationType.photo
+                      ? '📷 사진 필수'
+                      : '✏️ 텍스트만',
+                ),
+                const SizedBox(height: 12),
+
+                _buildInfoCard(
+                  '중간 가입',
+                  crew.allowLateJoin ? '✅ 가능' : '❌ 불가',
+                ),
+                const SizedBox(height: AppSizes.paddingLG),
+
+                Text(
+                  '크루원 (${crew.currentMembers}/${crew.maxMembers})',
+                  style: AppTextStyles.heading3
+                      .copyWith(color: AppColors.white),
+                ),
+                const SizedBox(height: AppSizes.paddingSM),
+                AppCard(
+                  child: Column(
+                    children: crew.members
+                        .map((m) => _buildMemberRow(m))
+                        .toList(),
+                  ),
+                ),
+                const SizedBox(height: AppSizes.paddingLG),
+              ],
+            ),
+          ),
+        ),
+
+        // 하단 버튼 — 이미 join 완료 상태이므로 홈으로 이동
+        Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSizes.paddingMD,
+          ),
+          child: Column(
+            children: [
+              AppButton(
+                text: '시작하기! 🚀',
+                onPressed: () => context.go('/home'),
+              ),
+              TextButton(
+                onPressed: () => context.go('/home'),
+                child: Text(
+                  '홈으로',
+                  style: AppTextStyles.body1
+                      .copyWith(color: AppColors.grey3),
+                ),
+              ),
+              const SizedBox(height: AppSizes.paddingSM),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -208,7 +193,7 @@ class CrewConfirmScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMemberRow(String name, bool isLeader) {
+  Widget _buildMemberRow(CrewMember member) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSizes.paddingXS),
       child: Row(
@@ -224,10 +209,10 @@ class CrewConfirmScreen extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Text(
-            name,
+            member.userId,
             style: AppTextStyles.body1.copyWith(color: AppColors.white),
           ),
-          if (isLeader) ...[
+          if (member.isLeader) ...[
             const SizedBox(width: AppSizes.paddingSM),
             Container(
               padding: const EdgeInsets.symmetric(

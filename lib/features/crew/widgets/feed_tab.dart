@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:triagain/core/constants/app_colors.dart';
 import 'package:triagain/core/constants/app_sizes.dart';
 import 'package:triagain/core/constants/app_text_styles.dart';
-import 'package:triagain/models/mock_data.dart';
 import 'package:triagain/models/verification.dart';
+import 'package:triagain/providers/verification_provider.dart';
 
-class FeedTab extends StatelessWidget {
+class FeedTab extends ConsumerWidget {
   final String crewId;
 
   const FeedTab({
@@ -14,50 +15,79 @@ class FeedTab extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final feed = MockData.getFeedForCrew(crewId);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final feedAsync = ref.watch(feedProvider(crewId));
 
-    if (feed.isEmpty) {
-      return Center(
-        child: Text(
-          '아직 인증이 없어요',
-          style: AppTextStyles.body2.copyWith(color: AppColors.grey3),
-        ),
-      );
-    }
+    return feedAsync.when(
+      data: (feed) {
+        final verifications = feed.verifications;
 
-    final grouped = _groupByDate(feed);
+        if (verifications.isEmpty) {
+          return Center(
+            child: Text(
+              '아직 인증이 없어요',
+              style: AppTextStyles.body2.copyWith(color: AppColors.grey3),
+            ),
+          );
+        }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(AppSizes.paddingMD),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          for (int i = 0; i < grouped.length; i++) ...[
-            if (i > 0) const SizedBox(height: AppSizes.paddingMD),
+        final grouped = _groupByDate(verifications);
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(AppSizes.paddingMD),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (int i = 0; i < grouped.length; i++) ...[
+                if (i > 0) const SizedBox(height: AppSizes.paddingMD),
+                Text(
+                  _formatDateHeader(grouped[i].key),
+                  style:
+                      AppTextStyles.heading3.copyWith(color: AppColors.white),
+                ),
+                const SizedBox(height: AppSizes.paddingSM),
+                for (int j = 0; j < grouped[i].value.length; j++) ...[
+                  if (j > 0) const SizedBox(height: AppSizes.paddingMD),
+                  _FeedCard(verification: grouped[i].value[j]),
+                ],
+              ],
+            ],
+          ),
+        );
+      },
+      loading: () => const Center(
+        child: CircularProgressIndicator(color: AppColors.main),
+      ),
+      error: (error, _) => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
             Text(
-              _formatDateHeader(grouped[i].key),
-              style: AppTextStyles.heading3.copyWith(color: AppColors.white),
+              '피드를 불러올 수 없습니다',
+              style: AppTextStyles.body1.copyWith(color: AppColors.grey3),
             ),
             const SizedBox(height: AppSizes.paddingSM),
-            for (int j = 0; j < grouped[i].value.length; j++) ...[
-              if (j > 0) const SizedBox(height: AppSizes.paddingMD),
-              _FeedCard(verification: grouped[i].value[j]),
-            ],
+            TextButton(
+              onPressed: () => ref.invalidate(feedProvider(crewId)),
+              child: Text(
+                '다시 시도',
+                style: AppTextStyles.body2.copyWith(color: AppColors.main),
+              ),
+            ),
           ],
-        ],
+        ),
       ),
     );
   }
 
-  List<MapEntry<DateTime, List<Verification>>> _groupByDate(
-      List<Verification> feed) {
-    final map = <DateTime, List<Verification>>{};
+  List<MapEntry<DateTime, List<FeedVerification>>> _groupByDate(
+      List<FeedVerification> feed) {
+    final map = <DateTime, List<FeedVerification>>{};
     for (final v in feed) {
-      final dateKey = DateTime(v.createdAt.year, v.createdAt.month, v.createdAt.day);
+      final dateKey =
+          DateTime(v.createdAt.year, v.createdAt.month, v.createdAt.day);
       map.putIfAbsent(dateKey, () => []).add(v);
     }
-    // Sort groups by date descending (newest first)
     final entries = map.entries.toList()
       ..sort((a, b) => b.key.compareTo(a.key));
     return entries;
@@ -78,15 +108,12 @@ class FeedTab extends StatelessWidget {
 }
 
 class _FeedCard extends StatelessWidget {
-  final Verification verification;
+  final FeedVerification verification;
 
   const _FeedCard({required this.verification});
 
   @override
   Widget build(BuildContext context) {
-    final userName =
-        MockData.userNames[verification.userId] ?? verification.userId;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -94,7 +121,7 @@ class _FeedCard extends StatelessWidget {
         Row(
           children: [
             Text(
-              userName,
+              verification.nickname,
               style: AppTextStyles.body2.copyWith(color: AppColors.white),
             ),
             const Spacer(),
@@ -131,10 +158,10 @@ class _FeedCard extends StatelessWidget {
           ),
         ],
         // Text
-        if (verification.text != null) ...[
+        if (verification.textContent != null) ...[
           const SizedBox(height: AppSizes.paddingSM),
           Text(
-            verification.text!,
+            verification.textContent!,
             style: AppTextStyles.body2.copyWith(color: AppColors.grey4),
           ),
         ],

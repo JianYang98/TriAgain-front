@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:triagain/core/constants/app_colors.dart';
 import 'package:triagain/core/constants/app_text_styles.dart';
 import 'package:triagain/core/constants/app_sizes.dart';
+import 'package:triagain/core/network/api_exception.dart';
 import 'package:triagain/features/home/widgets/crew_card.dart';
-import 'package:triagain/models/mock_data.dart';
+import 'package:triagain/providers/crew_provider.dart';
+import 'package:triagain/services/crew_service.dart';
 import 'package:triagain/widgets/app_button.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final crews = MockData.crews;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final crewsAsync = ref.watch(crewListProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -37,16 +41,61 @@ class HomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: AppSizes.paddingLG),
               Expanded(
-                child: ListView.separated(
-                  itemCount: crews.length,
-                  separatorBuilder: (_, _) =>
-                      const SizedBox(height: AppSizes.paddingMD),
-                  itemBuilder: (context, index) {
-                    return CrewCard(
-                      crew: crews[index],
-                      onTap: () => context.push('/crew/${crews[index].id}'),
+                child: crewsAsync.when(
+                  data: (crews) {
+                    if (crews.isEmpty) {
+                      return Center(
+                        child: Text(
+                          '참여 중인 크루가 없어요.\n크루를 만들거나 초대코드로 참여해보세요!',
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.body1
+                              .copyWith(color: AppColors.grey3),
+                        ),
+                      );
+                    }
+                    return RefreshIndicator(
+                      color: AppColors.main,
+                      onRefresh: () =>
+                          ref.refresh(crewListProvider.future),
+                      child: ListView.separated(
+                        itemCount: crews.length,
+                        separatorBuilder: (_, _) =>
+                            const SizedBox(height: AppSizes.paddingMD),
+                        itemBuilder: (context, index) {
+                          return CrewCard(
+                            crew: crews[index],
+                            onTap: () =>
+                                context.push('/crew/${crews[index].id}'),
+                          );
+                        },
+                      ),
                     );
                   },
+                  loading: () => const Center(
+                    child: CircularProgressIndicator(color: AppColors.main),
+                  ),
+                  error: (error, _) => Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          '크루 목록을 불러올 수 없습니다',
+                          style: AppTextStyles.body1
+                              .copyWith(color: AppColors.grey3),
+                        ),
+                        const SizedBox(height: AppSizes.paddingSM),
+                        TextButton(
+                          onPressed: () =>
+                              ref.invalidate(crewListProvider),
+                          child: Text(
+                            '다시 시도',
+                            style: AppTextStyles.body2
+                                .copyWith(color: AppColors.main),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: AppSizes.paddingMD),
@@ -59,7 +108,7 @@ class HomeScreen extends StatelessWidget {
                 width: double.infinity,
                 height: 52,
                 child: OutlinedButton(
-                  onPressed: () => _showInviteCodeDialog(context),
+                  onPressed: () => _showInviteCodeDialog(context, ref),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: AppColors.grey1),
                     backgroundColor: AppColors.background,
@@ -83,7 +132,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  void _showInviteCodeDialog(BuildContext context) {
+  void _showInviteCodeDialog(BuildContext context, WidgetRef ref) {
     final controller = TextEditingController();
 
     showDialog(
@@ -100,6 +149,11 @@ class HomeScreen extends StatelessWidget {
           ),
           content: TextField(
             controller: controller,
+            maxLength: 6,
+            textCapitalization: TextCapitalization.characters,
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
+            ],
             style: AppTextStyles.body1.copyWith(color: AppColors.white),
             decoration: InputDecoration(
               hintText: '초대코드를 입력하세요',
@@ -129,17 +183,30 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
             TextButton(
-              onPressed: () {
+              onPressed: () async {
                 final code = controller.text.trim();
-                Navigator.of(dialogContext).pop();
-                final crew = MockData.findByInviteCode(code);
-                if (crew != null) {
-                  context.push('/crew/confirm?crewId=${crew.id}');
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                if (code.isEmpty) return;
+                if (code.length != 6) {
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
                     const SnackBar(
-                      content: Text('유효하지 않은 초대코드입니다'),
-                    ),
+                        content: Text('초대코드 6자리를 입력해주세요')),
+                  );
+                  return;
+                }
+                try {
+                  final crewService = ref.read(crewServiceProvider);
+                  final result = await crewService.joinCrew(code);
+                  ref.invalidate(crewListProvider);
+                  if (!dialogContext.mounted) return;
+                  Navigator.of(dialogContext).pop();
+                  if (context.mounted) {
+                    context.push(
+                        '/crew/confirm?crewId=${result.crewId}');
+                  }
+                } on ApiException catch (e) {
+                  if (!dialogContext.mounted) return;
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    SnackBar(content: Text(e.message)),
                   );
                 }
               },

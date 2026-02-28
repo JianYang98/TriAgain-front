@@ -5,10 +5,15 @@ import 'package:triagain/core/constants/app_colors.dart';
 import 'package:triagain/core/constants/app_sizes.dart';
 import 'package:triagain/core/constants/app_text_styles.dart';
 
-const _inviteCode = 'ABC123';
-
 class CrewSuccessScreen extends StatelessWidget {
-  const CrewSuccessScreen({super.key});
+  final String inviteCode;
+  final String startDate;
+
+  const CrewSuccessScreen({
+    super.key,
+    required this.inviteCode,
+    required this.startDate,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -68,7 +73,7 @@ class CrewSuccessScreen extends StatelessWidget {
       ),
       child: Center(
         child: Text(
-          _inviteCode,
+          inviteCode,
           style: AppTextStyles.heading1.copyWith(
             color: AppColors.white,
             letterSpacing: 8,
@@ -135,7 +140,7 @@ class CrewSuccessScreen extends StatelessWidget {
       ),
       child: Center(
         child: Text(
-          '크루 시작: 2026.02.24',
+          '크루 시작: $startDate',
           style: AppTextStyles.body1.copyWith(color: AppColors.grey4),
         ),
       ),
@@ -143,7 +148,7 @@ class CrewSuccessScreen extends StatelessWidget {
   }
 
   void _copyToClipboard(BuildContext context) {
-    Clipboard.setData(const ClipboardData(text: _inviteCode));
+    Clipboard.setData(ClipboardData(text: inviteCode));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('초대코드가 복사되었습니다'),

@@ -6,9 +6,11 @@
 → 텍스트만 인증 가능한 크루라면 바로 POST /verifications
 
 ```
-1. POST /upload-sessions → presignedUrl 받음
-2. S3에 직접 업로드 (PUT {presignedUrl})
-3. POST /verifications → 인증 완료
+1. POST /upload-sessions → presignedUrl, uploadSessionId 수신
+2. GET /upload-sessions/{id}/events → SSE 구독 (업로드 완료 알림용)
+3. S3에 직접 업로드 (PUT {presignedUrl})
+4. SSE로 "COMPLETED" 이벤트 수신 (Lambda가 S3 업로드 감지 → session 상태 변경)
+5. POST /verifications → 인증 생성
 ```
 
 ---
@@ -175,10 +177,92 @@ Idempotency-Key: <uuid>
 ```
 
 **핵심 규칙:**
-- S3 업로드 성공 후에만 호출 가능 (upload_session이 PENDING 상태여야 함)
-- verification INSERT 성공 후에만 upload_session을 COMPLETED로 전환 (동일 트랜잭션)
+- upload_session이 COMPLETED 상태일 때만 호출 가능 (Lambda가 S3 업로드 감지 후 COMPLETED 처리)
 - 텍스트 인증 크루인 경우 uploadSessionId, imageUrl 없이 호출 가능
 - 마감 시간 기준: upload_session.requested_at (서버 기록, 조작 불가)
+
+---
+
+### GET /upload-sessions/{id}/events (SSE — 업로드 완료 알림)
+
+클라이언트가 S3 업로드 완료 여부를 실시간으로 수신하는 SSE 엔드포인트.
+presignedUrl 수신 직후, S3 업로드 전에 구독한다.
+
+**요청 (Request)**
+```
+GET /upload-sessions/{uploadSessionId}/events HTTP/1.1
+Authorization: Bearer <token>
+Accept: text/event-stream
+```
+
+**SSE 이벤트 형식:**
+```
+event: COMPLETED
+data: {"uploadSessionId": "upload_123", "status": "COMPLETED"}
+
+event: EXPIRED
+data: {"uploadSessionId": "upload_123", "status": "EXPIRED"}
+
+event: ERROR
+data: {"uploadSessionId": "upload_123", "message": "처리 중 오류가 발생했습니다."}
+```
+
+**이벤트 타입:**
+
+| 이벤트 | 의미 | 클라이언트 동작 |
+|--------|------|----------------|
+| COMPLETED | Lambda가 S3 업로드 감지, session COMPLETED 처리 완료 | POST /verifications 호출 |
+| EXPIRED | session 시간 초과 / 만료 | 재시도 안내 |
+| ERROR | 처리 중 오류 | 에러 표시 + 재시도 안내 |
+
+**타임아웃:**
+- 서버: 60초
+- 클라이언트 권장: 30초 (30초 내 COMPLETED 미수신 시 재시도 안내)
+
+**실패 응답:**
+```json
+// 404 Not Found
+{
+  "code": "UPLOAD_SESSION_NOT_FOUND",
+  "message": "업로드 세션을 찾을 수 없습니다."
+}
+
+// 401 Unauthorized
+{
+  "code": "UNAUTHORIZED",
+  "message": "로그인이 필요합니다."
+}
+```
+
+---
+
+### GET /upload-sessions/{id} (업로드 세션 상태 조회 — 폴링 fallback)
+
+SSE 연결이 끊긴 경우 폴링으로 session 상태를 확인하는 fallback 엔드포인트.
+
+**요청 (Request)**
+```
+GET /upload-sessions/{uploadSessionId} HTTP/1.1
+Authorization: Bearer <token>
+```
+
+**성공 응답 (200 OK)**
+```json
+{
+  "uploadSessionId": "upload_123",
+  "status": "COMPLETED",
+  "imageUrl": "https://s3.../abc123.jpg",
+  "requestedAt": "2026-02-18T14:30:00Z"
+}
+```
+
+**status 값:**
+
+| 상태 | 의미 | 클라이언트 동작 |
+|------|------|----------------|
+| PENDING | 아직 S3 업로드 미완료 | 2~3초 후 재폴링 |
+| COMPLETED | 업로드 완료 | POST /verifications 호출 |
+| EXPIRED | 만료 | 재시도 안내 |
 
 ---
 

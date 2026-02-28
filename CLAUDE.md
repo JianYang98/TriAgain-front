@@ -28,6 +28,7 @@
 - HTTP: Dio
 - 라우팅: GoRouter
 - 이미지: image_picker, cached_network_image
+- 실시간 통신: SSE (Server-Sent Events) — 업로드 완료 알림 수신
 
 ---
 
@@ -176,6 +177,27 @@ lib/
 - `setState` 남용 금지 → Riverpod 사용
 - 한 파일에 여러 Screen 위젯 몰아넣기 금지
 - 비즈니스 로직을 위젯 안에 넣지 않기
+
+---
+
+## 사진 인증 업로드 플로우
+
+### 시퀀스
+
+```
+1. POST /upload-sessions → presignedUrl, sessionId 수신
+2. GET /upload-sessions/{id}/events → SSE 구독 (업로드 완료 알림용)
+3. presignedUrl로 S3에 사진 업로드
+4. SSE로 "COMPLETED" 이벤트 수신 (Lambda가 S3 업로드 감지 → session 상태 변경)
+5. POST /verifications → 인증 생성
+```
+
+### 프론트 구현 포인트
+
+- SSE 구독: `GET /upload-sessions/{id}/events` — presignedUrl 수신 직후 연결
+- COMPLETED 이벤트 수신 시 자동으로 `/verifications` 호출
+- SSE 타임아웃: 30초 → 실패 시 사용자에게 재시도 안내
+- SSE 연결 끊김 fallback: `GET /upload-sessions/{id}`로 폴링하여 상태 확인
 
 ---
 

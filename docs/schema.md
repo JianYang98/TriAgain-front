@@ -193,11 +193,11 @@ erDiagram
 | COMPLETED | 검토 완료 |
 
 ### upload_session.status
-| 값 | 의미 |
-|----|------|
-| PENDING | presignedUrl 발급, S3 업로드 대기 |
-| COMPLETED | S3 업로드 완료 (verification 생성 가능) |
-| EXPIRED | 시간 초과 / 만료 |
+| 값 | 의미 | 전환 주체 |
+|----|------|-----------|
+| PENDING | presignedUrl 발급, S3 업로드 대기 | POST /upload-sessions |
+| COMPLETED | S3 업로드 완료 (verification 생성 가능) | Lambda (S3 이벤트 감지 → /internal API) |
+| EXPIRED | 시간 초과 / 만료 | 스케줄러 또는 Lambda |
 
 ### reports.reason
 | 값 | 의미 |

@@ -12,22 +12,23 @@ Phase 1은 단일 Spring Boot 애플리케이션을 중심으로 구성된다.
 graph TB
     subgraph "Inbound Adapters"
         REST[REST API Controllers]
+        Internal[Internal Controller<br/>Lambda → session COMPLETED + SSE 발행]
     end
-    
+
     subgraph "Application Core"
         subgraph UC[User Context]
             UDomain[User<br/>AuthInfo]
             UPort{{UserRepositoryPort<br/>AuthTokenPort}}
         end
-        
+
         subgraph CC[Crew Context - Core]
             CDomain[Crew<br/>CrewMember<br/>Challenge<br/>ProgressPolicy]
             CPort{{CrewRepositoryPort<br/>ChallengeRepositoryPort}}
         end
-        
+
         subgraph VC[Verification Context]
-            VDomain[Verification<br/>VerificationPolicy]
-            VPort{{VerificationRepositoryPort<br/>ChallengePort<br/>StoragePort}}
+            VDomain[Verification<br/>VerificationPolicy<br/>UploadSession]
+            VPort{{VerificationRepositoryPort<br/>UploadSessionRepositoryPort<br/>ChallengePort<br/>StoragePort<br/>SsePort}}
         end
         
         subgraph MC[Moderation Context]
@@ -44,30 +45,33 @@ graph TB
     subgraph "Outbound Adapters"
         DB[(PostgreSQL<br/>JPA Adapters)]
         S3[S3 Adapter]
+        SSE_S[SSE Adapter]
         AI[OpenAI Adapter<br/>Phase 3]
         Noti[FCM<br/>Adapters]
     end
-    
+
     REST --> UC
     REST --> CC
     REST --> VC
     REST --> MC
     REST --> SC
-    
+    Internal --> VC
+
     UC -.->|참조| CC
     CC -->|Command| VC
     VC -->|Command| MC
     VC -.->|Event| SC
     MC -.->|Event| SC
-    
+
     VC -->|ChallengePort| CC
     MC -->|VerificationPort| VC
     MC -->|CrewPort| CC
-    
+
     UPort --> DB
     CPort --> DB
     VPort --> DB
     VPort --> S3
+    VPort --> SSE_S
     MPort --> DB
     MPort --> AI
     SPort --> DB
@@ -79,11 +83,11 @@ graph TB
     classDef new fill:#ffebee,stroke:#c62828,stroke-width:3px
     classDef adapter fill:#e8f5e9,stroke:#1b5e20,stroke-width:2px
     
-    class REST primary
+    class REST,Internal primary
     class CC core
     class UC,VC,SC context
     class MC new
-    class DB,S3,AI,Noti adapter
+    class DB,S3,SSE_S,AI,Noti adapter
 ```
 
 ## 3. 헥사고날 아키텍처 (상세)
@@ -133,6 +137,7 @@ graph TB
         
         subgraph "External Services"
             S3[S3PresignAdapter]
+            SSE[SseEmitterAdapter]
             AI[OpenAiAdapter<br/>Phase 3]
             FCM[FcmAdapter<br/>Phase 2]
         end
@@ -156,14 +161,16 @@ graph TB
     REST --> VC
     REST --> MC
     REST --> SC
-    
+    Internal --> VC
+
     UC -.->|참조| CC
     CC -->|Command| VC
     VC -->|Command| MC
     VC -.->|Event| SC
     MC -.->|Event| SC
-    
+
     VPort -.->|ChallengePort| ChallengeClient
+    VPort --> SSE
     MPort -.->|VerificationPort| VerClient
     MPort -.->|CrewPort| CrewClient
     
@@ -199,11 +206,11 @@ graph TB
     classDef infra fill:#fafafa,stroke:#424242,stroke-width:2px
     classDef phase2 fill:#e0f7fa,stroke:#006064,stroke-width:2px,stroke-dasharray: 5 5
     
-    class REST primary
+    class REST,Internal primary
     class CC core
     class UC,VC,SC context
     class MC new
-    class UserRepo,CrewRepo,VerRepo,ReportRepo,ReviewRepo,NotiRepo,S3,AI,ChallengeClient,VerClient,CrewClient adapter
+    class UserRepo,CrewRepo,VerRepo,ReportRepo,ReviewRepo,NotiRepo,S3,SSE,AI,ChallengeClient,VerClient,CrewClient adapter
     class FCM phase2
     class DB,S3Storage,OpenAI,Firebase infra
 ```
@@ -228,7 +235,7 @@ com.jaksam.{context}
 ├── port/
 │   ├── in/            // UseCase 인터페이스
 │   └── out/           // Repository Port, External Port
-└── infra/             // JPA, MyBatis, S3 Adapter
+└── infra/             // JPA, MyBatis, S3, SSE Adapter
 ```
 
 ## 5. 컨텍스트 간 통신 규칙

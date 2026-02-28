@@ -73,6 +73,8 @@
 | 개발 순서 | 하드코딩 유저로 먼저 개발 → 마지막에 카카오 연동 |
 | 저장 정보 | 이메일, 닉네임, 프로필 이미지 (카카오에서 가져옴) |
 
+> 상세 설계는 [docs/user.md](user.md) 참고
+
 ---
 
 ## 2. 인증 방식 및 상태 정의
@@ -95,8 +97,10 @@
 
 **사진 인증:**
 ```
-인증 버튼 클릭 → POST /upload-sessions (URL 발급)
-→ S3 직접 업로드
+인증 버튼 클릭 → POST /upload-sessions (presignedUrl + sessionId 수신)
+→ GET /upload-sessions/{id}/events (SSE 구독)
+→ S3 직접 업로드 (PUT {presignedUrl})
+→ SSE로 "COMPLETED" 이벤트 수신 (Lambda가 S3 업로드 감지 → session COMPLETED 처리)
 → POST /verifications (이미지 key + 텍스트 선택)
 → 인증 완료
 ```
@@ -121,8 +125,10 @@
 | REJECTED | 검토 후 반려됨 |
 
 **핵심 규칙:**
-- S3 업로드 성공 후에만 verification 생성 (선택 A)
-- verification INSERT 성공 후에만 upload_session을 COMPLETED로 전환 (동일 트랜잭션)
+- Lambda가 S3 업로드 완료를 감지하여 upload_session을 COMPLETED로 전환
+- upload_session이 COMPLETED 상태일 때만 verification 생성 가능
+- 클라이언트는 SSE로 COMPLETED 이벤트 수신 후 POST /verifications 호출
+- SSE 연결 끊김 시 GET /upload-sessions/{id}로 폴링 fallback
 - upload_session과 verification은 별도 API로 분리
 
 ### 2.4 마감 시간 기준
@@ -179,15 +185,23 @@
   - Grace Period: 마감 넘어도 5분간 인증 처리
   - Phase 2: Write Queue 도입 검토
 
-### 4.3 S3 업로드 성공, DB 저장 실패
+### 4.3 S3 업로드 성공, /verifications 실패
 
-- **시나리오:** 클라이언트는 S3 업로드 성공했으나 /verifications 요청이 실패
+- **시나리오:** Lambda가 session을 COMPLETED로 전환했으나, /verifications 요청이 실패
 - **대응:**
-  - /verifications는 verification INSERT 성공 후에만 upload_session을 COMPLETED로 전환 (동일 트랜잭션)
-  - 실패 시 upload_session은 PENDING 유지, 클라이언트는 Idempotency-Key로 재시도 가능
+  - upload_session은 이미 COMPLETED 상태 유지 (Lambda가 처리)
+  - 클라이언트는 Idempotency-Key로 /verifications 재시도 가능
   - UNIQUE 충돌 등 영구적 오류는 즉시 실패 처리
 
-### 4.4 신고 시스템 악용
+### 4.4 SSE 연결 끊김 / 타임아웃
+
+- **시나리오:** SSE 연결이 끊기거나 30초 내 COMPLETED 이벤트를 수신하지 못함
+- **대응:**
+  - GET /upload-sessions/{id}로 폴링 fallback (2~3초 간격)
+  - 폴링으로 COMPLETED 확인 시 POST /verifications 호출
+  - 지속 실패 시 사용자에게 재시도 안내
+
+### 4.5 신고 시스템 악용
 
 - **시나리오:** 악의적 신고 (3건 이상)로 정상 인증이 REPORTED 전환
 - **대응:**
@@ -208,10 +222,11 @@ Circuit OPEN 시 단계별 기능 축소 전략.
 
 **흐름:**
 1. POST /upload-sessions → upload_session = PENDING, presignedUrl 반환
-2. Client → S3 PUT 일시 실패
-3. UX: "인증 접수 완료! 이미지를 업로드 중이에요. 잠시만 기다려주세요"
-4. Client가 앱 레벨에서 자동 재시도 (Exponential Backoff + Jitter, 3~5회)
-5. S3 업로드 성공 → POST /verifications → verification 생성 (APPROVED)
+2. GET /upload-sessions/{id}/events → SSE 구독
+3. Client → S3 PUT 일시 실패
+4. UX: "인증 접수 완료! 이미지를 업로드 중이에요. 잠시만 기다려주세요"
+5. Client가 앱 레벨에서 자동 재시도 (Exponential Backoff + Jitter, 3~5회)
+6. S3 업로드 성공 → SSE COMPLETED 수신 → POST /verifications → verification 생성 (APPROVED)
 
 **상태 흐름:** PENDING → COMPLETED
 
@@ -221,10 +236,11 @@ Circuit OPEN 시 단계별 기능 축소 전략.
 
 **흐름:**
 1. POST /upload-sessions → upload_session = PENDING
-2. S3 업로드 계속 실패, 클라이언트 재시도 모두 실패
-3. UX: "⚠️ 업로드가 지연되고 있어요. 오후 11시까지 사진을 추가해주세요"
-4. 유예시간 내 재업로드 (필요하면 새 presignedUrl 재발급)
-5. S3 성공 → POST /verifications → verification 생성 (APPROVED)
+2. GET /upload-sessions/{id}/events → SSE 구독
+3. S3 업로드 계속 실패, 클라이언트 재시도 모두 실패
+4. SSE 타임아웃 (30초) → UX: "⚠️ 업로드가 지연되고 있어요. 오후 11시까지 사진을 추가해주세요"
+5. 유예시간 내 재업로드 (필요하면 새 presignedUrl 재발급 + SSE 재구독)
+6. S3 성공 → SSE COMPLETED 수신 → POST /verifications → verification 생성 (APPROVED)
 
 **유예 기준:** challenge.deadline + 1시간
 
@@ -236,9 +252,11 @@ Circuit OPEN 시 단계별 기능 축소 전략.
 
 **흐름:**
 1. POST /upload-sessions → upload_session = PENDING
-2. S3 업로드 계속 실패 (장애 지속)
-3. 마감 이후에도 유예시간까지 재시도 가능하지만 계속 실패
-4. 유예시간까지도 실패 → upload_session = EXPIRED, verification 생성 안 됨
+2. GET /upload-sessions/{id}/events → SSE 구독
+3. S3 업로드 계속 실패 (장애 지속)
+4. SSE EXPIRED 이벤트 수신 또는 타임아웃
+5. 마감 이후에도 유예시간까지 재시도 가능하지만 계속 실패
+6. 유예시간까지도 실패 → upload_session = EXPIRED, verification 생성 안 됨
 
 **UX:** "❌ 지금 서버 문제로 사진 업로드가 안 되고 있습니다. 유예 시간까지 재시도 가능합니다 [지금 다시 업로드]"
 

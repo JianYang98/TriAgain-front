@@ -27,7 +27,7 @@
 │ Verification Context         │  ← 인증 기록
 │  - Verification              │  // "인증했어?"
 │  - VerificationPolicy        │
-│  - UploadSession             │ 
+│  - UploadSession             │  // SSE로 업로드 완료 알림
 └──────────────────────────────┘
          │                  │
          │ Event (비동기)    │ Command (동기)
@@ -92,7 +92,8 @@
 
 ### Verification Context
 - 일일 인증 기록
-- 업로드 세션 관리 (Pre-signed URL)
+- 업로드 세션 관리 (Pre-signed URL, SSE 업로드 완료 알림)
+- Lambda → Internal API로 session COMPLETED 처리 + SSE 이벤트 발행
 - 인증 정책 (VerificationPolicy)
 
 ### Moderation Context

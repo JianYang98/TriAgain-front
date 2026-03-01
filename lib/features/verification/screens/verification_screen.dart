@@ -181,11 +181,14 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                     TextField(
                       controller: _textController,
                       maxLines: 4,
+                      maxLength: 200,
                       style:
                           AppTextStyles.body1.copyWith(color: AppColors.white),
                       decoration: InputDecoration(
                         hintText: '오늘 어땠나요?',
                         hintStyle: AppTextStyles.body1
+                            .copyWith(color: AppColors.grey3),
+                        counterStyle: AppTextStyles.caption
                             .copyWith(color: AppColors.grey3),
                         filled: true,
                         fillColor: AppColors.card,

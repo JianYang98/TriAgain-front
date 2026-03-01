@@ -27,6 +27,7 @@ final router = GoRouter(
       builder: (context, state) => CrewSuccessScreen(
         inviteCode: state.uri.queryParameters['inviteCode'] ?? '',
         startDate: state.uri.queryParameters['startDate'] ?? '',
+        crewName: state.uri.queryParameters['crewName'] ?? '',
       ),
     ),
     GoRoute(

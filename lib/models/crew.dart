@@ -48,6 +48,7 @@ class CrewSummary {
   final DateTime startDate;
   final DateTime endDate;
   final DateTime createdAt;
+  final String? deadlineTime;
 
   const CrewSummary({
     required this.id,
@@ -60,6 +61,7 @@ class CrewSummary {
     required this.startDate,
     required this.endDate,
     required this.createdAt,
+    this.deadlineTime,
   });
 
   factory CrewSummary.fromJson(Map<String, dynamic> json) {
@@ -75,6 +77,7 @@ class CrewSummary {
       startDate: DateTime.parse(json['startDate'] as String),
       endDate: DateTime.parse(json['endDate'] as String),
       createdAt: DateTime.parse(json['createdAt'] as String),
+      deadlineTime: json['deadlineTime'] as String?,
     );
   }
 }
@@ -116,6 +119,7 @@ class CrewDetail {
   final String inviteCode;
   final DateTime createdAt;
   final List<CrewMember> members;
+  final String? deadlineTime;
 
   const CrewDetail({
     required this.id,
@@ -132,6 +136,7 @@ class CrewDetail {
     required this.inviteCode,
     required this.createdAt,
     required this.members,
+    this.deadlineTime,
   });
 
   factory CrewDetail.fromJson(Map<String, dynamic> json) {
@@ -153,6 +158,7 @@ class CrewDetail {
       members: (json['members'] as List)
           .map((m) => CrewMember.fromJson(m as Map<String, dynamic>))
           .toList(),
+      deadlineTime: json['deadlineTime'] as String?,
     );
   }
 }

@@ -126,6 +126,13 @@ class CrewConfirmScreen extends ConsumerWidget {
                   '중간 가입',
                   crew.allowLateJoin ? '✅ 가능' : '❌ 불가',
                 ),
+                if (crew.deadlineTime != null) ...[
+                  const SizedBox(height: 12),
+                  _buildInfoCard(
+                    '인증 마감',
+                    '${_formatDeadlineLabel(crew.deadlineTime!)}까지',
+                  ),
+                ],
                 const SizedBox(height: AppSizes.paddingLG),
 
                 Text(
@@ -232,6 +239,16 @@ class CrewConfirmScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  String _formatDeadlineLabel(String deadlineTime) {
+    final parts = deadlineTime.split(':');
+    final hour = int.parse(parts[0]);
+    final minute = int.parse(parts[1]);
+    final period = hour < 12 ? '오전' : '오후';
+    final displayHour = hour == 0 ? 12 : hour > 12 ? hour - 12 : hour;
+    final minuteStr = minute > 0 ? ' $minute분' : '';
+    return '$period $displayHour시$minuteStr';
   }
 
   String _formatDate(DateTime date) {

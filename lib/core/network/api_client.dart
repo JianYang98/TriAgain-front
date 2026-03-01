@@ -1,19 +1,20 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:triagain/providers/auth_provider.dart';
 import 'api_exception.dart';
 import 'api_response.dart';
 
 const _baseUrl = 'http://localhost:8080';
-const _tempUserId = 'test-user-1';
 
 final apiClientProvider = Provider<ApiClient>((ref) {
-  return ApiClient();
+  final userId = ref.watch(authUserIdProvider);
+  return ApiClient(userId: userId);
 });
 
 class ApiClient {
   late final Dio _dio;
 
-  ApiClient() {
+  ApiClient({String? userId}) {
     _dio = Dio(
       BaseOptions(
         baseUrl: _baseUrl,
@@ -26,7 +27,9 @@ class ApiClient {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {
-          options.headers['X-User-Id'] = _tempUserId;
+          if (userId != null) {
+            options.headers['X-User-Id'] = userId;
+          }
           handler.next(options);
         },
         onError: (error, handler) {

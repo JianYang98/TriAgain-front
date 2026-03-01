@@ -37,6 +37,7 @@ class CrewService {
     required DateTime startDate,
     required DateTime endDate,
     required bool allowLateJoin,
+    String? deadlineTime,
   }) async {
     final response = await _apiClient.post<CreateCrewResult>(
       '/crews',
@@ -48,6 +49,7 @@ class CrewService {
         'startDate': _formatDate(startDate),
         'endDate': _formatDate(endDate),
         'allowLateJoin': allowLateJoin,
+        if (deadlineTime != null) 'deadlineTime': deadlineTime,
       },
       fromData: (json) =>
           CreateCrewResult.fromJson(json as Map<String, dynamic>),

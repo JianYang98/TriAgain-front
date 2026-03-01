@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:triagain/core/constants/app_colors.dart';
 import 'package:triagain/core/constants/app_sizes.dart';
 import 'package:triagain/core/constants/app_text_styles.dart';
@@ -75,6 +76,13 @@ class CrewInfoBottomSheet extends StatelessWidget {
                     '중간 가입',
                     crew.allowLateJoin ? '✅ 가능' : '❌ 불가',
                   ),
+                  if (crew.deadlineTime != null) ...[
+                    const SizedBox(height: 12),
+                    _buildInfoCard(
+                      '인증 마감',
+                      '${_formatDeadlineLabel(crew.deadlineTime!)}까지',
+                    ),
+                  ],
                   const SizedBox(height: AppSizes.paddingLG),
 
                   Text(
@@ -111,20 +119,25 @@ class CrewInfoBottomSheet extends StatelessWidget {
                 Expanded(
                   child: SizedBox(
                     height: 52,
-                    child: ElevatedButton.icon(
+                    child: OutlinedButton.icon(
                       onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        Clipboard.setData(
+                          ClipboardData(text: crew.inviteCode),
+                        );
+                        final messenger = ScaffoldMessenger.of(context);
+                        Navigator.of(context).pop();
+                        messenger.showSnackBar(
                           const SnackBar(
-                            content: Text('링크가 복사되었습니다'),
+                            content: Text('초대코드가 복사되었습니다'),
                             duration: Duration(seconds: 2),
                           ),
                         );
                       },
-                      icon: const Icon(Icons.link, size: 18),
-                      label: const Text('링크 공유'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.main,
+                      icon: const Icon(Icons.copy, size: 18),
+                      label: const Text('코드 복사'),
+                      style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.white,
+                        side: const BorderSide(color: AppColors.grey1),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(
                             AppSizes.buttonRadius,
@@ -139,23 +152,17 @@ class CrewInfoBottomSheet extends StatelessWidget {
                 Expanded(
                   child: SizedBox(
                     height: 52,
-                    child: OutlinedButton.icon(
+                    child: ElevatedButton.icon(
                       onPressed: () {
-                        Clipboard.setData(
-                          ClipboardData(text: crew.inviteCode),
-                        );
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('초대코드가 복사되었습니다'),
-                            duration: Duration(seconds: 2),
-                          ),
-                        );
+                        final message =
+                            '🔥 TriAgain 크루에 초대합니다!\n크루: ${crew.name}\n초대코드: ${crew.inviteCode}';
+                        SharePlus.instance.share(ShareParams(text: message));
                       },
-                      icon: const Icon(Icons.copy, size: 18),
-                      label: const Text('코드 복사'),
-                      style: OutlinedButton.styleFrom(
+                      icon: const Icon(Icons.share, size: 18),
+                      label: const Text('초대 메시지 공유'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.main,
                         foregroundColor: AppColors.white,
-                        side: const BorderSide(color: AppColors.grey1),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(
                             AppSizes.buttonRadius,
@@ -232,6 +239,16 @@ class CrewInfoBottomSheet extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _formatDeadlineLabel(String deadlineTime) {
+    final parts = deadlineTime.split(':');
+    final hour = int.parse(parts[0]);
+    final minute = int.parse(parts[1]);
+    final period = hour < 12 ? '오전' : '오후';
+    final displayHour = hour == 0 ? 12 : hour > 12 ? hour - 12 : hour;
+    final minuteStr = minute > 0 ? ' $minute분' : '';
+    return '$period $displayHour시$minuteStr';
   }
 
   String _formatDate(DateTime date) {

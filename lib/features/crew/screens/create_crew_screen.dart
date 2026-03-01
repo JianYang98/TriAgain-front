@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -23,11 +24,19 @@ class _CreateCrewScreenState extends ConsumerState<CreateCrewScreen> {
 
   final _nameController = TextEditingController();
   final _goalController = TextEditingController();
+  final _nameFocus = FocusNode();
+  final _goalFocus = FocusNode();
+  final _nameKey = GlobalKey();
+  final _goalKey = GlobalKey();
+  final _endDateKey = GlobalKey();
   int _maxMembers = 5;
   late DateTime _startDate;
   DateTime? _endDate;
   VerificationType _verificationType = VerificationType.photo;
   bool _allowLateJoin = false;
+  bool _hasDeadlineTime = false;
+  int _deadlineHour = 23;
+  int _deadlineMinute = 0;
   bool _isSubmitting = false;
 
   DateTime get _tomorrow {
@@ -48,17 +57,54 @@ class _CreateCrewScreenState extends ConsumerState<CreateCrewScreen> {
   void dispose() {
     _nameController.dispose();
     _goalController.dispose();
+    _nameFocus.dispose();
+    _goalFocus.dispose();
     super.dispose();
+  }
+
+  Future<void> _scrollToAndFocus(GlobalKey key, FocusNode focus) async {
+    final ctx = key.currentContext;
+    if (ctx != null) {
+      await Scrollable.ensureVisible(
+        ctx,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+      focus.requestFocus();
+    }
   }
 
   Future<void> _handleCreate() async {
     final name = _nameController.text.trim();
     final goal = _goalController.text.trim();
 
-    if (name.isEmpty || goal.isEmpty || _endDate == null) {
+    if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('모든 항목을 입력해주세요')),
+        const SnackBar(content: Text('크루 이름을 입력해주세요')),
       );
+      _scrollToAndFocus(_nameKey, _nameFocus);
+      return;
+    }
+    if (goal.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('목표를 입력해주세요')),
+      );
+      _scrollToAndFocus(_goalKey, _goalFocus);
+      return;
+    }
+    if (_endDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('종료일을 선택해주세요')),
+      );
+      final ctx = _endDateKey.currentContext;
+      if (ctx != null) {
+        await Scrollable.ensureVisible(
+          ctx,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
+      _pickDate(isStart: false);
       return;
     }
 
@@ -66,6 +112,10 @@ class _CreateCrewScreenState extends ConsumerState<CreateCrewScreen> {
 
     try {
       final crewService = ref.read(crewServiceProvider);
+      final deadlineTime = _hasDeadlineTime
+          ? '${_deadlineHour.toString().padLeft(2, '0')}:${_deadlineMinute.toString().padLeft(2, '0')}'
+          : null;
+
       final result = await crewService.createCrew(
         name: name,
         goal: goal,
@@ -74,6 +124,7 @@ class _CreateCrewScreenState extends ConsumerState<CreateCrewScreen> {
         startDate: _startDate,
         endDate: _endDate!,
         allowLateJoin: _allowLateJoin,
+        deadlineTime: deadlineTime,
       );
 
       ref.invalidate(crewListProvider);
@@ -83,7 +134,7 @@ class _CreateCrewScreenState extends ConsumerState<CreateCrewScreen> {
       final dateStr =
           '${result.startDate.year}.${result.startDate.month.toString().padLeft(2, '0')}.${result.startDate.day.toString().padLeft(2, '0')}';
       context.go(
-          '/crew/success?inviteCode=${result.inviteCode}&startDate=$dateStr');
+          '/crew/success?inviteCode=${result.inviteCode}&startDate=$dateStr&crewName=${Uri.encodeComponent(name)}');
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -137,14 +188,19 @@ class _CreateCrewScreenState extends ConsumerState<CreateCrewScreen> {
                     const SizedBox(height: AppSizes.paddingSM),
 
                     _buildSection(
+                      key: _nameKey,
                       label: '크루 이름',
                       child: TextField(
                         controller: _nameController,
+                        focusNode: _nameFocus,
+                        maxLength: 20,
                         style: AppTextStyles.body1
                             .copyWith(color: AppColors.white),
                         decoration: InputDecoration(
                           hintText: '크루 이름을 입력하세요',
                           hintStyle: AppTextStyles.body1
+                              .copyWith(color: AppColors.grey3),
+                          counterStyle: AppTextStyles.caption
                               .copyWith(color: AppColors.grey3),
                           border: InputBorder.none,
                           isDense: true,
@@ -155,14 +211,19 @@ class _CreateCrewScreenState extends ConsumerState<CreateCrewScreen> {
                     const SizedBox(height: AppSizes.paddingSM),
 
                     _buildSection(
+                      key: _goalKey,
                       label: '목표',
                       child: TextField(
                         controller: _goalController,
+                        focusNode: _goalFocus,
+                        maxLength: 50,
                         style: AppTextStyles.body1
                             .copyWith(color: AppColors.white),
                         decoration: InputDecoration(
                           hintText: '목표를 입력하세요',
                           hintStyle: AppTextStyles.body1
+                              .copyWith(color: AppColors.grey3),
+                          counterStyle: AppTextStyles.caption
                               .copyWith(color: AppColors.grey3),
                           border: InputBorder.none,
                           isDense: true,
@@ -257,6 +318,7 @@ class _CreateCrewScreenState extends ConsumerState<CreateCrewScreen> {
                         const SizedBox(width: AppSizes.paddingSM),
                         Expanded(
                           child: _buildSection(
+                            key: _endDateKey,
                             label: '종료일',
                             child: GestureDetector(
                               onTap: () => _pickDate(isStart: false),
@@ -303,6 +365,60 @@ class _CreateCrewScreenState extends ConsumerState<CreateCrewScreen> {
                     const SizedBox(height: AppSizes.paddingSM),
 
                     _buildSection(
+                      label: '인증 마감 시간',
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          GestureDetector(
+                            onTap: _hasDeadlineTime
+                                ? () => _showTimePickerSheet()
+                                : null,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  _hasDeadlineTime
+                                      ? _formatDeadlineLabel()
+                                      : '자정 기준',
+                                  style: AppTextStyles.body1.copyWith(
+                                    color: _hasDeadlineTime
+                                        ? AppColors.white
+                                        : AppColors.grey3,
+                                  ),
+                                ),
+                                if (_hasDeadlineTime) ...[
+                                  const SizedBox(width: 6),
+                                  const Icon(
+                                    Icons.edit,
+                                    color: AppColors.grey3,
+                                    size: 16,
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          Switch(
+                            value: _hasDeadlineTime,
+                            activeTrackColor: AppColors.main,
+                            onChanged: (value) async {
+                              if (value) {
+                                setState(() => _hasDeadlineTime = true);
+                                _showTimePickerSheet();
+                              } else {
+                                setState(() {
+                                  _hasDeadlineTime = false;
+                                  _deadlineHour = 23;
+                                  _deadlineMinute = 0;
+                                });
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSizes.paddingSM),
+
+                    _buildSection(
                       label: '중간 가입',
                       child: ToggleSelector<bool>(
                         items: const [true, false],
@@ -340,10 +456,12 @@ class _CreateCrewScreenState extends ConsumerState<CreateCrewScreen> {
   }
 
   Widget _buildSection({
+    Key? key,
     required String label,
     required Widget child,
   }) {
     return Container(
+      key: key,
       width: double.infinity,
       padding: const EdgeInsets.all(AppSizes.paddingMD),
       decoration: BoxDecoration(
@@ -412,6 +530,144 @@ class _CreateCrewScreenState extends ConsumerState<CreateCrewScreen> {
         }
       });
     }
+  }
+
+  Future<void> _showTimePickerSheet() async {
+    var tempHour = _deadlineHour;
+    var tempMinute = _deadlineMinute;
+
+    final confirmed = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: AppColors.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSizes.paddingMD),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppColors.grey2,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(height: AppSizes.paddingMD),
+                    SizedBox(
+                      height: 150,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: CupertinoPicker(
+                              scrollController: FixedExtentScrollController(
+                                initialItem: tempHour,
+                              ),
+                              itemExtent: 36,
+                              onSelectedItemChanged: (index) {
+                                tempHour = index;
+                              },
+                              children: List.generate(
+                                24,
+                                (i) => Center(
+                                  child: Text(
+                                    '$i시',
+                                    style: AppTextStyles.body1
+                                        .copyWith(color: AppColors.white),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          Text(
+                            ':',
+                            style: AppTextStyles.heading2
+                                .copyWith(color: AppColors.white),
+                          ),
+                          Expanded(
+                            child: CupertinoPicker(
+                              scrollController: FixedExtentScrollController(
+                                initialItem: tempMinute ~/ 5,
+                              ),
+                              itemExtent: 36,
+                              onSelectedItemChanged: (index) {
+                                tempMinute = index * 5;
+                              },
+                              children: List.generate(
+                                12,
+                                (i) => Center(
+                                  child: Text(
+                                    '${(i * 5).toString().padLeft(2, '0')}분',
+                                    style: AppTextStyles.body1
+                                        .copyWith(color: AppColors.white),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSizes.paddingMD),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            _deadlineHour = tempHour;
+                            _deadlineMinute = tempMinute;
+                          });
+                          Navigator.of(sheetContext).pop(true);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.main,
+                          foregroundColor: AppColors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                              AppSizes.buttonRadius,
+                            ),
+                          ),
+                          textStyle: AppTextStyles.button,
+                        ),
+                        child: const Text('확인'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    // 바텀시트를 확인 없이 닫은 경우 토글 OFF로 롤백
+    if (confirmed != true && mounted) {
+      setState(() {
+        _hasDeadlineTime = false;
+        _deadlineHour = 23;
+        _deadlineMinute = 0;
+      });
+    }
+  }
+
+  String _formatDeadlineLabel() {
+    final period = _deadlineHour < 12 ? '오전' : '오후';
+    final displayHour = _deadlineHour == 0
+        ? 12
+        : _deadlineHour > 12
+            ? _deadlineHour - 12
+            : _deadlineHour;
+    final minuteStr =
+        _deadlineMinute > 0 ? ' $_deadlineMinute분' : '';
+    return '$period $displayHour시$minuteStr까지';
   }
 
   String _formatDate(DateTime? date) {

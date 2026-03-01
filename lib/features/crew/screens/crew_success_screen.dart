@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:triagain/core/constants/app_colors.dart';
 import 'package:triagain/core/constants/app_sizes.dart';
 import 'package:triagain/core/constants/app_text_styles.dart';
@@ -8,11 +9,13 @@ import 'package:triagain/core/constants/app_text_styles.dart';
 class CrewSuccessScreen extends StatelessWidget {
   final String inviteCode;
   final String startDate;
+  final String crewName;
 
   const CrewSuccessScreen({
     super.key,
     required this.inviteCode,
     required this.startDate,
+    required this.crewName,
   });
 
   @override
@@ -110,9 +113,9 @@ class CrewSuccessScreen extends StatelessWidget {
           child: SizedBox(
             height: 52,
             child: ElevatedButton.icon(
-              onPressed: () => _copyToClipboard(context),
-              icon: const Icon(Icons.link, size: 18),
-              label: const Text('링크 공유'),
+              onPressed: () => _shareInviteMessage(context),
+              icon: const Icon(Icons.share, size: 18),
+              label: const Text('초대 메시지 공유'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.main,
                 foregroundColor: AppColors.white,
@@ -155,5 +158,10 @@ class CrewSuccessScreen extends StatelessWidget {
         duration: Duration(seconds: 2),
       ),
     );
+  }
+
+  void _shareInviteMessage(BuildContext context) {
+    final message = '🔥 TriAgain 크루에 초대합니다!\n크루: $crewName\n초대코드: $inviteCode';
+    SharePlus.instance.share(ShareParams(text: message));
   }
 }

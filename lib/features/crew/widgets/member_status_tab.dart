@@ -5,7 +5,6 @@ import 'package:triagain/core/constants/app_sizes.dart';
 import 'package:triagain/core/constants/app_text_styles.dart';
 import 'package:triagain/models/crew.dart';
 import 'package:triagain/providers/crew_provider.dart';
-import 'package:triagain/widgets/app_card.dart';
 
 class MemberStatusTab extends ConsumerWidget {
   final String crewId;
@@ -21,23 +20,26 @@ class MemberStatusTab extends ConsumerWidget {
 
     return crewAsync.when(
       data: (crew) {
-        final members = crew.members;
+        final members = List<CrewMember>.from(crew.members)..sort(_compareMember);
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(AppSizes.paddingMD),
-          child: AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSizes.paddingSM),
+                child: Text(
                   '크루원 (${crew.currentMembers}/${crew.maxMembers})',
-                  style:
-                      AppTextStyles.heading3.copyWith(color: AppColors.white),
+                  style: AppTextStyles.heading3
+                      .copyWith(color: AppColors.white),
                 ),
-                const SizedBox(height: AppSizes.paddingMD),
-                ...members.map((m) => _buildMemberRow(m)),
+              ),
+              for (int i = 0; i < members.length; i++) ...[
+                if (i > 0) const SizedBox(height: AppSizes.paddingMD),
+                _buildMemberRow(members[i], isFirst: i == 0),
               ],
-            ),
+            ],
           ),
         );
       },
@@ -67,42 +69,194 @@ class MemberStatusTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildMemberRow(CrewMember member) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSizes.paddingXS),
-      child: Row(
+  int _compareMember(CrewMember a, CrewMember b) {
+    final aCount = a.challengeProgress?.successCount ?? 0;
+    final bCount = b.challengeProgress?.successCount ?? 0;
+    if (aCount != bCount) return bCount.compareTo(aCount);
+    return a.joinedAt.compareTo(b.joinedAt);
+  }
+
+  Widget _buildMemberRow(CrewMember member, {required bool isFirst}) {
+    final progress = member.challengeProgress;
+    final successCount = progress?.successCount ?? 0;
+    final completed = progress?.completedDays ?? 0;
+    final target = progress?.targetDays ?? 3;
+    final isSuccess = progress?.challengeStatus == 'SUCCESS';
+
+    // N번째 텍스트
+    final String attemptText;
+    if (isSuccess) {
+      attemptText = '$successCount번째 작심삼일 달성!';
+    } else {
+      final n = successCount + 1;
+      attemptText = '$n번째 작심삼일 달성중';
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 프로필 영역
+        SizedBox(
+          width: 64,
+          child: Column(
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  CircleAvatar(
+                    radius: 24,
+                    backgroundColor: AppColors.grey2,
+                    child: const Icon(
+                      Icons.person,
+                      color: AppColors.grey3,
+                      size: 24,
+                    ),
+                  ),
+                  if (isFirst)
+                    Positioned(
+                      bottom: -2,
+                      right: -2,
+                      child: Container(
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          color: AppColors.main,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: AppColors.background,
+                            width: 2,
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.emoji_events,
+                          size: 10,
+                          color: AppColors.white,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                member.userId,
+                style: AppTextStyles.caption
+                    .copyWith(color: AppColors.grey4),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: AppSizes.paddingSM),
+        // 진행 영역
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 2),
+              Row(
+                children: [
+                  Text(
+                    attemptText,
+                    style: AppTextStyles.body2.copyWith(
+                      color: isSuccess ? AppColors.main : AppColors.white,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  if (member.isLeader) ...[
+                    const SizedBox(width: AppSizes.paddingXS),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 1,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.main.withValues(alpha: 0.15),
+                        borderRadius:
+                            BorderRadius.circular(AppSizes.badgeRadius),
+                      ),
+                      child: Text(
+                        '크루장',
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.main,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 6),
+              _buildProgressBar(completed, target, isSuccess),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProgressBar(int completed, int target, bool isSuccess) {
+    final fraction = target > 0 ? (completed / target).clamp(0.0, 1.0) : 0.0;
+
+    return SizedBox(
+      height: 28,
+      child: Stack(
         children: [
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: AppColors.grey2,
-            child: const Icon(
-              Icons.person,
-              color: AppColors.grey3,
-              size: 24,
+          // 배경
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.grey1,
+              borderRadius: BorderRadius.circular(8),
             ),
           ),
-          const SizedBox(width: 12),
-          Text(
-            member.userId,
-            style: AppTextStyles.body1.copyWith(color: AppColors.white),
-          ),
-          if (member.isLeader) ...[
-            const SizedBox(width: AppSizes.paddingSM),
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSizes.paddingSM,
-                vertical: 2,
-              ),
-              decoration: BoxDecoration(
-                color: AppColors.main,
-                borderRadius: BorderRadius.circular(AppSizes.badgeRadius),
-              ),
-              child: Text(
-                '크루장',
-                style: AppTextStyles.caption.copyWith(color: AppColors.white),
+          // 채움
+          if (fraction > 0)
+            FractionallySizedBox(
+              widthFactor: fraction,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: AppColors.main,
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
             ),
-          ],
+          // 텍스트
+          Positioned(
+            right: 10,
+            top: 0,
+            bottom: 0,
+            child: Center(
+              child: isSuccess
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Done',
+                          style: AppTextStyles.body2.copyWith(
+                            color: AppColors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(width: 3),
+                        const Icon(
+                          Icons.check_circle,
+                          color: AppColors.white,
+                          size: 14,
+                        ),
+                      ],
+                    )
+                  : Text(
+                      '$completed/$target',
+                      style: AppTextStyles.body2.copyWith(
+                        color: completed > 0
+                            ? AppColors.white
+                            : AppColors.grey3,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+            ),
+          ),
         ],
       ),
     );

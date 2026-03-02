@@ -82,15 +82,40 @@ class CrewSummary {
   }
 }
 
+class ChallengeProgress {
+  final String challengeStatus;
+  final int completedDays;
+  final int targetDays;
+  final int successCount;
+
+  const ChallengeProgress({
+    required this.challengeStatus,
+    required this.completedDays,
+    required this.targetDays,
+    required this.successCount,
+  });
+
+  factory ChallengeProgress.fromJson(Map<String, dynamic> json) {
+    return ChallengeProgress(
+      challengeStatus: json['challengeStatus'] as String,
+      completedDays: json['completedDays'] as int,
+      targetDays: json['targetDays'] as int,
+      successCount: json['successCount'] as int,
+    );
+  }
+}
+
 class CrewMember {
   final String userId;
   final String role;
   final DateTime joinedAt;
+  final ChallengeProgress? challengeProgress;
 
   const CrewMember({
     required this.userId,
     required this.role,
     required this.joinedAt,
+    this.challengeProgress,
   });
 
   factory CrewMember.fromJson(Map<String, dynamic> json) {
@@ -98,6 +123,10 @@ class CrewMember {
       userId: json['userId'] as String,
       role: json['role'] as String,
       joinedAt: DateTime.parse(json['joinedAt'] as String),
+      challengeProgress: json['challengeProgress'] != null
+          ? ChallengeProgress.fromJson(
+              json['challengeProgress'] as Map<String, dynamic>)
+          : null,
     );
   }
 

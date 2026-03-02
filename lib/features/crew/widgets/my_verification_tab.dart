@@ -4,6 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:triagain/core/constants/app_colors.dart';
 import 'package:triagain/core/constants/app_sizes.dart';
 import 'package:triagain/core/constants/app_text_styles.dart';
+import 'package:triagain/features/crew/widgets/verification_calendar.dart';
+import 'package:triagain/models/verification.dart';
+import 'package:triagain/providers/auth_provider.dart';
+import 'package:triagain/providers/crew_provider.dart';
 import 'package:triagain/providers/verification_provider.dart';
 import 'package:triagain/widgets/app_button.dart';
 import 'package:triagain/widgets/app_card.dart';
@@ -19,15 +23,51 @@ class MyVerificationTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final feedAsync = ref.watch(feedProvider(crewId));
+    final datesAsync = ref.watch(myVerificationDatesProvider(crewId));
+    final crewAsync = ref.watch(crewDetailProvider(crewId));
+
+    final crew = crewAsync.valueOrNull;
+    if (crew == null) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.main),
+      );
+    }
 
     return feedAsync.when(
       data: (feed) {
         final progress = feed.myProgress;
+        final verifiedDates = datesAsync.valueOrNull ?? {};
+        final userId = ref.watch(authUserIdProvider);
+
+        // 내 가입일 찾기
+        DateTime joinedAt = crew.startDate;
+        if (userId != null) {
+          for (final m in crew.members) {
+            if (m.userId == userId) {
+              joinedAt = DateTime(
+                m.joinedAt.year,
+                m.joinedAt.month,
+                m.joinedAt.day,
+              );
+              break;
+            }
+          }
+        }
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(AppSizes.paddingMD),
           child: Column(
             children: [
+              VerificationCalendar(
+                crewStartDate: crew.startDate,
+                crewEndDate: crew.endDate,
+                verifiedDates: verifiedDates,
+                joinedAt: joinedAt,
+              ),
+              const SizedBox(height: AppSizes.paddingSM),
+              _buildStreakSummary(verifiedDates, joinedAt, crew.endDate,
+                  progress),
+              const SizedBox(height: AppSizes.paddingMD),
               _buildChallengeProgressCard(context, progress),
             ],
           ),
@@ -46,7 +86,10 @@ class MyVerificationTab extends ConsumerWidget {
             ),
             const SizedBox(height: AppSizes.paddingSM),
             TextButton(
-              onPressed: () => ref.invalidate(feedProvider(crewId)),
+              onPressed: () {
+                ref.invalidate(feedProvider(crewId));
+                ref.invalidate(myVerificationDatesProvider(crewId));
+              },
               child: Text(
                 '다시 시도',
                 style: AppTextStyles.body2.copyWith(color: AppColors.main),
@@ -58,11 +101,67 @@ class MyVerificationTab extends ConsumerWidget {
     );
   }
 
+  Widget _buildStreakSummary(
+    Set<DateTime> verifiedDates,
+    DateTime joinedAt,
+    DateTime crewEnd,
+    MyProgress progress,
+  ) {
+    final streakCount =
+        _countCompletedStreaks(verifiedDates, joinedAt, crewEnd);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSizes.paddingXS),
+      child: Row(
+        children: [
+          Text(
+            '작심삼일 $streakCount회 달성',
+            style: AppTextStyles.body2.copyWith(
+              color: streakCount > 0 ? AppColors.main : AppColors.grey3,
+              fontWeight: streakCount > 0 ? FontWeight.w600 : null,
+            ),
+          ),
+          const Spacer(),
+          Text(
+            '현재: Day ${progress.completedDays}/${progress.targetDays}',
+            style: AppTextStyles.body2.copyWith(color: AppColors.grey3),
+          ),
+        ],
+      ),
+    );
+  }
+
+  int _countCompletedStreaks(
+      Set<DateTime> verifiedDates, DateTime joinedAt, DateTime crewEnd) {
+    int count = 0;
+    final joined = DateTime(joinedAt.year, joinedAt.month, joinedAt.day);
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final end = DateTime(crewEnd.year, crewEnd.month, crewEnd.day);
+    final limit = today.isBefore(end) ? today : end;
+
+    var blockStart = joined;
+    while (!blockStart.isAfter(limit)) {
+      final day1 = blockStart;
+      final day2 = blockStart.add(const Duration(days: 1));
+      final day3 = blockStart.add(const Duration(days: 2));
+
+      if (verifiedDates.contains(day1) &&
+          verifiedDates.contains(day2) &&
+          verifiedDates.contains(day3)) {
+        count++;
+      }
+      blockStart = blockStart.add(const Duration(days: 3));
+    }
+    return count;
+  }
+
   Widget _buildChallengeProgressCard(
-      BuildContext context, dynamic progress) {
-    final completedDays = progress.completedDays as int;
-    final targetDays = progress.targetDays as int;
-    final challengeId = progress.challengeId as String;
+      BuildContext context, MyProgress progress) {
+    final completedDays = progress.completedDays;
+    final targetDays = progress.targetDays;
+    final challengeId = progress.challengeId;
+    final isCompleted = completedDays >= targetDays;
 
     return AppCard(
       child: Column(
@@ -72,7 +171,7 @@ class MyVerificationTab extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(targetDays, (index) {
-              final isCompleted = index < completedDays;
+              final isDone = index < completedDays;
               return Padding(
                 padding: EdgeInsets.only(
                   right: index < targetDays - 1 ? AppSizes.paddingLG : 0,
@@ -83,7 +182,7 @@ class MyVerificationTab extends ConsumerWidget {
                       width: 20,
                       height: 20,
                       decoration: BoxDecoration(
-                        color: isCompleted ? AppColors.main : AppColors.grey2,
+                        color: isDone ? AppColors.main : AppColors.grey2,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -91,7 +190,7 @@ class MyVerificationTab extends ConsumerWidget {
                     Text(
                       'Day ${index + 1}',
                       style: AppTextStyles.caption.copyWith(
-                        color: isCompleted ? AppColors.white : AppColors.grey3,
+                        color: isDone ? AppColors.white : AppColors.grey3,
                       ),
                     ),
                   ],
@@ -101,15 +200,21 @@ class MyVerificationTab extends ConsumerWidget {
           ),
           const SizedBox(height: AppSizes.paddingSM),
           Text(
-            '$completedDays/$targetDays일 완료',
-            style: AppTextStyles.body2.copyWith(color: AppColors.grey3),
+            isCompleted
+                ? '작심삼일 달성!'
+                : '$completedDays/$targetDays일 완료',
+            style: AppTextStyles.body2.copyWith(
+              color: isCompleted ? AppColors.success : AppColors.grey3,
+              fontWeight: isCompleted ? FontWeight.w600 : null,
+            ),
           ),
           const SizedBox(height: AppSizes.paddingMD),
-          AppButton(
-            text: '📷 오늘 인증하기',
-            onPressed: () => context.push(
-                '/verification?crewId=$crewId&challengeId=$challengeId'),
-          ),
+          if (!isCompleted)
+            AppButton(
+              text: '오늘 인증하기',
+              onPressed: () => context.push(
+                  '/verification?crewId=$crewId&challengeId=$challengeId'),
+            ),
           const SizedBox(height: AppSizes.paddingXS),
         ],
       ),

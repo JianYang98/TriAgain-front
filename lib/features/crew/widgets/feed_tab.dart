@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:triagain/core/constants/app_colors.dart';
@@ -136,12 +137,23 @@ class _FeedCard extends StatelessWidget {
           const SizedBox(height: AppSizes.paddingSM),
           ClipRRect(
             borderRadius: BorderRadius.circular(AppSizes.cardRadius),
-            child: Image.network(
-              verification.imageUrl!,
+            child: CachedNetworkImage(
+              imageUrl: verification.imageUrl!,
               width: double.infinity,
               height: 200,
               fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) => Container(
+              placeholder: (context, url) => Container(
+                width: double.infinity,
+                height: 200,
+                color: AppColors.card,
+                child: const Center(
+                  child: CircularProgressIndicator(
+                    color: AppColors.main,
+                    strokeWidth: 2,
+                  ),
+                ),
+              ),
+              errorWidget: (context, url, error) => Container(
                 width: double.infinity,
                 height: 200,
                 decoration: BoxDecoration(

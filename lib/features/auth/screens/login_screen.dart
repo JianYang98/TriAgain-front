@@ -52,6 +52,27 @@ class LoginScreen extends ConsumerWidget {
                   label: 'Test User 2',
                   userId: 'test-user-2',
                 ),
+                const SizedBox(height: AppSizes.paddingSM),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: OutlinedButton(
+                    onPressed: () => _showCustomLoginDialog(context, ref),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.grey3),
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppSizes.buttonRadius),
+                      ),
+                      textStyle: AppTextStyles.button,
+                    ),
+                    child: Text(
+                      '커스텀 로그인',
+                      style:
+                          AppTextStyles.button.copyWith(color: AppColors.grey4),
+                    ),
+                  ),
+                ),
               ] else
                 SizedBox(
                   width: double.infinity,
@@ -76,6 +97,65 @@ class LoginScreen extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _showCustomLoginDialog(BuildContext context, WidgetRef ref) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.card,
+        title: Text(
+          '커스텀 로그인',
+          style: AppTextStyles.heading3.copyWith(color: AppColors.white),
+        ),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          style: AppTextStyles.body1.copyWith(color: AppColors.white),
+          decoration: InputDecoration(
+            hintText: 'userId 입력',
+            hintStyle: AppTextStyles.body1.copyWith(color: AppColors.grey3),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: AppColors.grey2),
+            ),
+            focusedBorder: const UnderlineInputBorder(
+              borderSide: BorderSide(color: AppColors.main),
+            ),
+          ),
+          onSubmitted: (value) {
+            if (value.trim().isNotEmpty) {
+              Navigator.of(dialogContext).pop();
+              ref.read(authUserIdProvider.notifier).state = value.trim();
+              context.go('/home');
+            }
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(
+              '취소',
+              style: AppTextStyles.body2.copyWith(color: AppColors.grey3),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              final value = controller.text.trim();
+              if (value.isNotEmpty) {
+                Navigator.of(dialogContext).pop();
+                ref.read(authUserIdProvider.notifier).state = value;
+                context.go('/home');
+              }
+            },
+            child: Text(
+              '확인',
+              style: AppTextStyles.body2.copyWith(color: AppColors.main),
+            ),
+          ),
+        ],
       ),
     );
   }

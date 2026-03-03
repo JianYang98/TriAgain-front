@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:triagain/core/constants/app_colors.dart';
@@ -31,10 +32,12 @@ class _MyPageScreenState extends ConsumerState<MyPageScreen> {
   }
 
   Future<void> _loadUser() async {
-    // 인증 가드
+    // 인증 가드 — 빌드 완료 후 네비게이션
     final token = ref.read(authTokenProvider);
     if (token == null) {
-      if (mounted) context.go('/login');
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) context.go('/login');
+      });
       return;
     }
 
@@ -292,6 +295,10 @@ class _MyPageScreenState extends ConsumerState<MyPageScreen> {
                 controller: controller,
                 autofocus: true,
                 maxLength: 12,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(
+                      RegExp(r'[가-힣a-zA-Z0-9_]')),
+                ],
                 style: AppTextStyles.body1.copyWith(color: AppColors.white),
                 decoration: InputDecoration(
                   hintText: '새 닉네임 입력 (2~12자)',

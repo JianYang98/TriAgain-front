@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:triagain/core/constants/app_colors.dart';
@@ -180,6 +181,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 controller: _nicknameController,
                 style: AppTextStyles.body1.copyWith(color: AppColors.white),
                 maxLength: 12,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(
+                      RegExp(r'[가-힣a-zA-Z0-9_]')),
+                ],
                 decoration: InputDecoration(
                   hintText: '닉네임을 입력해주세요 (2~12자)',
                   hintStyle:

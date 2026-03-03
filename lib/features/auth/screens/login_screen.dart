@@ -53,7 +53,7 @@ class LoginScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              if (kDebugMode) ...[
+              if (!kReleaseMode) ...[
                 const SizedBox(height: AppSizes.paddingSM),
                 _buildTestUserButton(
                   context,
@@ -187,8 +187,7 @@ class LoginScreen extends ConsumerWidget {
           onSubmitted: (value) {
             if (value.trim().isNotEmpty) {
               Navigator.of(dialogContext).pop();
-              ref.read(authUserIdProvider.notifier).state = value.trim();
-              context.go('/home');
+              _loginAsTestUser(context, ref, value.trim());
             }
           },
         ),
@@ -205,8 +204,7 @@ class LoginScreen extends ConsumerWidget {
               final value = controller.text.trim();
               if (value.isNotEmpty) {
                 Navigator.of(dialogContext).pop();
-                ref.read(authUserIdProvider.notifier).state = value;
-                context.go('/home');
+                _loginAsTestUser(context, ref, value);
               }
             },
             child: Text(
@@ -219,6 +217,51 @@ class LoginScreen extends ConsumerWidget {
     );
   }
 
+  Future<void> _loginAsTestUser(
+      BuildContext context, WidgetRef ref, String userId) async {
+    try {
+      final authService = ref.read(authServiceProvider);
+      final result = await authService.testLogin(userId);
+
+      // null 방어 — test-login은 항상 기존 유저, 3개 필드 필수
+      if (result.accessToken == null ||
+          result.refreshToken == null ||
+          result.user == null) {
+        throw Exception('Invalid test login response');
+      }
+
+      if (!context.mounted) return;
+
+      // 토큰 세팅 (카카오 로그인과 동일)
+      ref.read(authTokenProvider.notifier).state = result.accessToken;
+      ref.read(authUserIdProvider.notifier).state = result.user!.id;
+      ref.read(authUserProvider.notifier).state = result.user;
+
+      final storage = ref.read(secureStorageProvider);
+      await saveRefreshToken(storage, result.refreshToken!);
+
+      if (!context.mounted) return;
+      context.go('/home');
+    } on ApiException catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text(e.message), backgroundColor: AppColors.error),
+        );
+      }
+    } catch (e) {
+      debugPrint('테스트 로그인 실패: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('테스트 로그인에 실패했습니다.'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
   Widget _buildTestUserButton(
     BuildContext context,
     WidgetRef ref, {
@@ -229,10 +272,7 @@ class LoginScreen extends ConsumerWidget {
       width: double.infinity,
       height: 52,
       child: ElevatedButton(
-        onPressed: () {
-          ref.read(authUserIdProvider.notifier).state = userId;
-          context.go('/home');
-        },
+        onPressed: () => _loginAsTestUser(context, ref, userId),
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.main,
           foregroundColor: AppColors.white,

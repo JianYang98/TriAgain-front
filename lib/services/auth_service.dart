@@ -90,6 +90,19 @@ class AuthService {
     }
   }
 
+  /// POST /auth/test-login — 테스트 로그인 (dev 전용)
+  Future<KakaoLoginResponse> testLogin(String userId) async {
+    try {
+      final response = await _dio.post(
+        '/auth/test-login',
+        data: {'userId': userId},
+      );
+      return _parseData(response, KakaoLoginResponse.fromJson);
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
   /// POST /auth/logout — 로그아웃 (best-effort)
   /// 자체 Dio 사용 — 401 refresh→retry 무한루프 방지
   Future<void> logout() async {

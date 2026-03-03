@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:triagain/providers/auth_provider.dart';
 import 'package:triagain/services/auth_service.dart';
@@ -34,12 +33,6 @@ class ApiClient {
             final token = _ref.read(authTokenProvider);
             if (token != null) {
               options.headers['Authorization'] = 'Bearer $token';
-            } else if (kDebugMode) {
-              // 개발 모드: 테스트 유저용 X-User-Id 폴백
-              final userId = _ref.read(authUserIdProvider);
-              if (userId != null) {
-                options.headers['X-User-Id'] = userId;
-              }
             }
           }
           handler.next(options);

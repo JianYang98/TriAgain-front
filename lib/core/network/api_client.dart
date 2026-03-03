@@ -1,20 +1,23 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:triagain/providers/auth_provider.dart';
+import 'package:triagain/services/auth_service.dart';
 import 'api_exception.dart';
 import 'api_response.dart';
 
 const _baseUrl = 'http://localhost:8080';
 
 final apiClientProvider = Provider<ApiClient>((ref) {
-  final userId = ref.watch(authUserIdProvider);
-  return ApiClient(userId: userId);
+  return ApiClient(ref: ref);
 });
 
 class ApiClient {
   late final Dio _dio;
+  final Ref _ref;
+  bool _isRefreshing = false;
 
-  ApiClient({String? userId}) {
+  ApiClient({required Ref ref}) : _ref = ref {
     _dio = Dio(
       BaseOptions(
         baseUrl: _baseUrl,
@@ -27,12 +30,51 @@ class ApiClient {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {
-          if (userId != null) {
-            options.headers['X-User-Id'] = userId;
+          if (!options.path.startsWith('/auth/')) {
+            final token = _ref.read(authTokenProvider);
+            if (token != null) {
+              options.headers['Authorization'] = 'Bearer $token';
+            } else if (kDebugMode) {
+              // 개발 모드: 테스트 유저용 X-User-Id 폴백
+              final userId = _ref.read(authUserIdProvider);
+              if (userId != null) {
+                options.headers['X-User-Id'] = userId;
+              }
+            }
           }
           handler.next(options);
         },
-        onError: (error, handler) {
+        onError: (error, handler) async {
+          if (error.response?.statusCode == 401 &&
+              !error.requestOptions.path.startsWith('/auth/') &&
+              !_isRefreshing) {
+            _isRefreshing = true;
+            try {
+              final authService = _ref.read(authServiceProvider);
+              final newToken = await authService.refreshAccessToken();
+
+              if (newToken != null) {
+                _ref.read(authTokenProvider.notifier).state = newToken;
+
+                // 원래 요청 재시도
+                final opts = error.requestOptions;
+                opts.headers['Authorization'] = 'Bearer $newToken';
+                final response = await _dio.fetch(opts);
+                return handler.resolve(response);
+              }
+            } catch (_) {
+              // refresh 실패 — 아래에서 로그아웃 처리
+            } finally {
+              _isRefreshing = false;
+            }
+
+            // refresh 실패 → 로그아웃
+            _ref.read(authTokenProvider.notifier).state = null;
+            _ref.read(authUserIdProvider.notifier).state = null;
+            _ref.read(authUserProvider.notifier).state = null;
+            final storage = _ref.read(secureStorageProvider);
+            await deleteRefreshToken(storage);
+          }
           handler.reject(error);
         },
       ),
@@ -71,6 +113,22 @@ class ApiClient {
         path,
         data: data,
         options: extraHeaders != null ? Options(headers: extraHeaders) : null,
+      );
+      return _parseResponse(response, fromData);
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
+  Future<ApiResponse<T>> patch<T>(
+    String path, {
+    Map<String, dynamic>? data,
+    required T Function(dynamic json) fromData,
+  }) async {
+    try {
+      final response = await _dio.patch(
+        path,
+        data: data,
       );
       return _parseResponse(response, fromData);
     } on DioException catch (e) {

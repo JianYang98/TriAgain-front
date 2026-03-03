@@ -19,27 +19,36 @@ class HomeScreen extends ConsumerWidget {
     final crewsAsync = ref.watch(crewListProvider);
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: AppColors.background,
+        automaticallyImplyLeading: false,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'TriAgain',
+              style: AppTextStyles.heading1.copyWith(color: AppColors.white),
+            ),
+            Text(
+              'Start Small. Try Again',
+              style: AppTextStyles.body1.copyWith(color: AppColors.grey3),
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person_outline, color: AppColors.white),
+            onPressed: () => context.push('/mypage'),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSizes.paddingMD),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: AppSizes.paddingLG),
-              Text(
-                'TriAgain',
-                style: AppTextStyles.heading1.copyWith(
-                  color: AppColors.white,
-                ),
-              ),
-              const SizedBox(height: AppSizes.paddingXS),
-              Text(
-                'Start Small. Try Again',
-                style: AppTextStyles.body1.copyWith(
-                  color: AppColors.grey3,
-                ),
-              ),
-              const SizedBox(height: AppSizes.paddingLG),
+              const SizedBox(height: AppSizes.paddingMD),
               Expanded(
                 child: crewsAsync.when(
                   data: (crews) {

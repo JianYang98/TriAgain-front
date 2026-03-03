@@ -2,10 +2,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:kakao_flutter_sdk/kakao_flutter_sdk.dart';
 import 'package:triagain/core/constants/app_colors.dart';
 import 'package:triagain/core/constants/app_text_styles.dart';
 import 'package:triagain/core/constants/app_sizes.dart';
+import 'package:triagain/core/network/api_exception.dart';
 import 'package:triagain/providers/auth_provider.dart';
+import 'package:triagain/services/auth_service.dart';
 
 class LoginScreen extends ConsumerWidget {
   const LoginScreen({super.key});
@@ -38,7 +41,20 @@ class LoginScreen extends ConsumerWidget {
                 style: AppTextStyles.body1.copyWith(color: AppColors.grey3),
               ),
               const Spacer(flex: 4),
+              // 카카오 로그인 버튼 (항상 표시)
+              GestureDetector(
+                onTap: () => _loginWithKakao(context, ref),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.asset(
+                    'images/kakao/kakao_login.png',
+                    width: double.infinity,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
               if (kDebugMode) ...[
+                const SizedBox(height: AppSizes.paddingSM),
                 _buildTestUserButton(
                   context,
                   ref,
@@ -73,32 +89,75 @@ class LoginScreen extends ConsumerWidget {
                     ),
                   ),
                 ),
-              ] else
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      // TODO: 카카오 로그인 구현
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFEE500),
-                      foregroundColor: Colors.black,
-                      shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppSizes.buttonRadius),
-                      ),
-                      textStyle: AppTextStyles.button,
-                    ),
-                    child: const Text('카카오로 시작하기'),
-                  ),
-                ),
+              ],
               const SizedBox(height: AppSizes.paddingXL),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _loginWithKakao(BuildContext context, WidgetRef ref) async {
+    try {
+      // 1. 카카오 SDK 로그인 → kakaoAccessToken 획득
+      OAuthToken token;
+      if (await isKakaoTalkInstalled()) {
+        token = await UserApi.instance.loginWithKakaoTalk();
+      } else {
+        token = await UserApi.instance.loginWithKakaoAccount();
+      }
+
+      final kakaoAccessToken = token.accessToken;
+      debugPrint('카카오 로그인 성공: $kakaoAccessToken');
+
+      // 2. POST /auth/kakao 호출
+      final authService = ref.read(authServiceProvider);
+      final result = await authService.loginWithKakao(kakaoAccessToken);
+
+      if (!context.mounted) return;
+
+      if (!result.isNewUser) {
+        // 3. 기존 유저 → 토큰 저장 → 홈 이동
+        ref.read(authTokenProvider.notifier).state = result.accessToken;
+        ref.read(authUserIdProvider.notifier).state = result.user!.id;
+        ref.read(authUserProvider.notifier).state = result.user;
+
+        // refreshToken → SecureStorage 저장
+        final storage = ref.read(secureStorageProvider);
+        await saveRefreshToken(storage, result.refreshToken!);
+
+        if (!context.mounted) return;
+        context.go('/home');
+      } else {
+        // 4. 신규 유저 → 임시 저장 → 온보딩 이동
+        ref.read(kakaoAccessTokenProvider.notifier).state = kakaoAccessToken;
+        ref.read(kakaoIdProvider.notifier).state = result.kakaoId;
+        ref.read(kakaoProfileProvider.notifier).state = result.kakaoProfile;
+
+        context.go('/onboarding');
+      }
+    } on ApiException catch (e) {
+      debugPrint('백엔드 인증 실패: ${e.code} - ${e.message}');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.message),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } catch (error) {
+      debugPrint('카카오 로그인 실패: $error');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('로그인에 실패했습니다. 다시 시도해주세요.'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 
   void _showCustomLoginDialog(BuildContext context, WidgetRef ref) {

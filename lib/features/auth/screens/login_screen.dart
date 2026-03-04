@@ -66,7 +66,7 @@ class LoginScreen extends ConsumerWidget {
                   height: 52,
                   child: SignInWithAppleButton(
                     text: 'Apple로 로그인',
-                    style: SignInWithAppleButtonStyle.black,
+                    style: SignInWithAppleButtonStyle.white,
                     // TODO: Apple Developer 승인 후 _loginWithApple(context, ref) 로 복원
                     onPressed: () {
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -138,11 +138,11 @@ class LoginScreen extends ConsumerWidget {
 
       // 2. POST /auth/kakao 호출
       final authService = ref.read(authServiceProvider);
-      final result = await authService.loginWithKakao(kakaoAccessToken);
+      final result = await authService.loginWithKakao(kakaoAccessToken); // 카카오 토큰 받음 
 
       if (!context.mounted) return;
 
-      if (!result.isNewUser) {
+      if (!result.isNewUser) { // 기존 유저일때! 
         // 3. 기존 유저 → 토큰 저장 → 홈 이동
         ref.read(authTokenProvider.notifier).state = result.accessToken;
         ref.read(authUserIdProvider.notifier).state = result.user!.id;
@@ -158,7 +158,7 @@ class LoginScreen extends ConsumerWidget {
         debugPrint('로그인 완료: userId=${result.user!.id}');
 
         if (!context.mounted) return;
-        context.go('/home');
+        context.go('/home'); // 홈으로 
       } else {
         // 4. 신규 유저 → 임시 저장 → 온보딩 이동
         ref.read(kakaoAccessTokenProvider.notifier).state = kakaoAccessToken;

@@ -17,12 +17,12 @@ import 'package:triagain/widgets/app_button.dart';
 
 class VerificationScreen extends ConsumerStatefulWidget {
   final String crewId;
-  final String challengeId;
+  final String? challengeId;
 
   const VerificationScreen({
     super.key,
     required this.crewId,
-    required this.challengeId,
+    this.challengeId,
   });
 
   @override
@@ -111,6 +111,7 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
       // 텍스트 인증만 (사진 업로드는 3단계에서 구현)
       await verificationService.createVerification(
         challengeId: widget.challengeId,
+        crewId: widget.crewId,
         textContent: textContent.isNotEmpty ? textContent : null,
         idempotencyKey: idempotencyKey,
       );

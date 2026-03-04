@@ -62,10 +62,15 @@ GoRouter createRouter({String initialLocation = '/login'}) {
       ),
       GoRoute(
         path: '/verification',
-        builder: (context, state) => VerificationScreen(
-          crewId: state.uri.queryParameters['crewId'] ?? '',
-          challengeId: state.uri.queryParameters['challengeId'] ?? '',
-        ),
+        builder: (context, state) {
+          final rawChallengeId = state.uri.queryParameters['challengeId'];
+          return VerificationScreen(
+            crewId: state.uri.queryParameters['crewId'] ?? '',
+            challengeId: (rawChallengeId == null || rawChallengeId.isEmpty)
+                ? null
+                : rawChallengeId,
+          );
+        },
       ),
     ],
   );

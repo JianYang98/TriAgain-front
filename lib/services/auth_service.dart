@@ -6,7 +6,7 @@ import 'package:triagain/core/network/api_exception.dart';
 import 'package:triagain/models/auth.dart';
 import 'package:triagain/providers/auth_provider.dart';
 
-const _baseUrl = 'http://localhost:8080';
+const _baseUrl = 'http://localhost:8080'; // 이거 나중에 수정보자! 
 
 final authServiceProvider = Provider<AuthService>((ref) {
   final storage = ref.watch(secureStorageProvider);

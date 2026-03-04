@@ -22,7 +22,8 @@ class VerificationService {
   }
 
   Future<VerificationResult> createVerification({
-    required String challengeId,
+    String? challengeId,
+    required String crewId,
     int? uploadSessionId,
     String? textContent,
     required String idempotencyKey,
@@ -30,7 +31,8 @@ class VerificationService {
     final response = await _apiClient.post<VerificationResult>(
       '/verifications',
       data: {
-        'challengeId': challengeId,
+        'crewId': crewId,
+        if (challengeId != null) 'challengeId': challengeId,
         if (uploadSessionId != null) 'uploadSessionId': uploadSessionId,
         if (textContent != null) 'textContent': textContent,
       },

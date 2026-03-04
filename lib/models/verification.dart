@@ -58,12 +58,12 @@ class MyProgress {
 
 class FeedResult {
   final List<FeedVerification> verifications;
-  final MyProgress myProgress;
+  final MyProgress? myProgress;
   final bool hasNext;
 
   const FeedResult({
     required this.verifications,
-    required this.myProgress,
+    this.myProgress,
     required this.hasNext,
   });
 
@@ -72,8 +72,9 @@ class FeedResult {
       verifications: (json['verifications'] as List)
           .map((v) => FeedVerification.fromJson(v as Map<String, dynamic>))
           .toList(),
-      myProgress:
-          MyProgress.fromJson(json['myProgress'] as Map<String, dynamic>),
+      myProgress: json['myProgress'] != null
+          ? MyProgress.fromJson(json['myProgress'] as Map<String, dynamic>)
+          : null,
       hasNext: json['hasNext'] as bool,
     );
   }

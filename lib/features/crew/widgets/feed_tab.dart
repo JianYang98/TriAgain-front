@@ -6,8 +6,9 @@ import 'package:triagain/core/constants/app_sizes.dart';
 import 'package:triagain/core/constants/app_text_styles.dart';
 import 'package:triagain/models/verification.dart';
 import 'package:triagain/providers/verification_provider.dart';
+import 'package:triagain/services/verification_service.dart';
 
-class FeedTab extends ConsumerWidget {
+class FeedTab extends ConsumerStatefulWidget {
   final String crewId;
 
   const FeedTab({
@@ -16,14 +17,90 @@ class FeedTab extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final feedAsync = ref.watch(feedProvider(crewId));
+  ConsumerState<FeedTab> createState() => _FeedTabState();
+}
+
+class _FeedTabState extends ConsumerState<FeedTab> {
+  final ScrollController _scrollController = ScrollController();
+  List<FeedVerification> _verifications = [];
+  bool _hasNext = false;
+  int _currentPage = 0;
+  bool _isLoadingMore = false;
+  bool _isInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      _loadMore();
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_isLoadingMore || !_hasNext) return;
+    setState(() => _isLoadingMore = true);
+
+    try {
+      final service = ref.read(verificationServiceProvider);
+      final result =
+          await service.getFeed(widget.crewId, page: _currentPage + 1);
+      if (mounted) {
+        setState(() {
+          _verifications.addAll(result.verifications);
+          _hasNext = result.hasNext;
+          _currentPage++;
+          _isLoadingMore = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isLoadingMore = false);
+      }
+    }
+  }
+
+  void _initFromFeed(FeedResult feed) {
+    if (!_isInitialized) {
+      _verifications = List.of(feed.verifications);
+      _hasNext = feed.hasNext;
+      _currentPage = 0;
+      _isInitialized = true;
+    }
+  }
+
+  void _resetState() {
+    _verifications = [];
+    _hasNext = false;
+    _currentPage = 0;
+    _isInitialized = false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final feedAsync = ref.watch(feedProvider(widget.crewId));
+
+    ref.listen(feedProvider(widget.crewId), (prev, next) {
+      if (prev?.hasValue == true && next.hasValue) {
+        _resetState();
+      }
+    });
 
     return feedAsync.when(
       data: (feed) {
-        final verifications = feed.verifications;
+        _initFromFeed(feed);
 
-        if (verifications.isEmpty) {
+        if (_verifications.isEmpty) {
           return Center(
             child: Text(
               '아직 인증이 없어요',
@@ -32,28 +109,24 @@ class FeedTab extends ConsumerWidget {
           );
         }
 
-        final grouped = _groupByDate(verifications);
+        final grouped = _groupByDate(_verifications);
+        final items = _buildFlatItems(grouped);
 
-        return SingleChildScrollView(
+        return ListView.builder(
+          controller: _scrollController,
           padding: const EdgeInsets.all(AppSizes.paddingMD),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (int i = 0; i < grouped.length; i++) ...[
-                if (i > 0) const SizedBox(height: AppSizes.paddingMD),
-                Text(
-                  _formatDateHeader(grouped[i].key),
-                  style:
-                      AppTextStyles.heading3.copyWith(color: AppColors.white),
+          itemCount: items.length + (_isLoadingMore ? 1 : 0),
+          itemBuilder: (context, index) {
+            if (index == items.length) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: AppSizes.paddingMD),
+                child: Center(
+                  child: CircularProgressIndicator(color: AppColors.main),
                 ),
-                const SizedBox(height: AppSizes.paddingSM),
-                for (int j = 0; j < grouped[i].value.length; j++) ...[
-                  if (j > 0) const SizedBox(height: AppSizes.paddingMD),
-                  _FeedCard(verification: grouped[i].value[j]),
-                ],
-              ],
-            ],
-          ),
+              );
+            }
+            return items[index];
+          },
         );
       },
       loading: () => const Center(
@@ -69,7 +142,10 @@ class FeedTab extends ConsumerWidget {
             ),
             const SizedBox(height: AppSizes.paddingSM),
             TextButton(
-              onPressed: () => ref.invalidate(feedProvider(crewId)),
+              onPressed: () {
+                _resetState();
+                ref.invalidate(feedProvider(widget.crewId));
+              },
               child: Text(
                 '다시 시도',
                 style: AppTextStyles.body2.copyWith(color: AppColors.main),
@@ -79,6 +155,24 @@ class FeedTab extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  List<Widget> _buildFlatItems(
+      List<MapEntry<DateTime, List<FeedVerification>>> grouped) {
+    final items = <Widget>[];
+    for (int i = 0; i < grouped.length; i++) {
+      if (i > 0) items.add(const SizedBox(height: AppSizes.paddingMD));
+      items.add(Text(
+        _formatDateHeader(grouped[i].key),
+        style: AppTextStyles.heading3.copyWith(color: AppColors.white),
+      ));
+      items.add(const SizedBox(height: AppSizes.paddingSM));
+      for (int j = 0; j < grouped[i].value.length; j++) {
+        if (j > 0) items.add(const SizedBox(height: AppSizes.paddingMD));
+        items.add(_FeedCard(verification: grouped[i].value[j]));
+      }
+    }
+    return items;
   }
 
   List<MapEntry<DateTime, List<FeedVerification>>> _groupByDate(

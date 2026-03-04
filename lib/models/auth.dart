@@ -6,6 +6,8 @@ class KakaoLoginResponse {
   final AuthUser? user;
   final String? kakaoId;
   final KakaoProfile? kakaoProfile;
+  final String? appleId;
+  final String? email;
 
   const KakaoLoginResponse({
     required this.isNewUser,
@@ -15,6 +17,8 @@ class KakaoLoginResponse {
     this.user,
     this.kakaoId,
     this.kakaoProfile,
+    this.appleId,
+    this.email,
   });
 
   factory KakaoLoginResponse.fromJson(Map<String, dynamic> json) {
@@ -31,6 +35,8 @@ class KakaoLoginResponse {
           ? KakaoProfile.fromJson(
               json['kakaoProfile'] as Map<String, dynamic>)
           : null,
+      appleId: json['appleId'] as String?,
+      email: json['email'] as String?,
     );
   }
 }
@@ -39,11 +45,13 @@ class AuthUser {
   final String id;
   final String nickname;
   final String? profileImageUrl;
+  final String? email;
 
   const AuthUser({
     required this.id,
     required this.nickname,
     this.profileImageUrl,
+    this.email,
   });
 
   factory AuthUser.fromJson(Map<String, dynamic> json) {
@@ -51,6 +59,7 @@ class AuthUser {
       id: json['id'] as String,
       nickname: json['nickname'] as String,
       profileImageUrl: json['profileImageUrl'] as String?,
+      email: json['email'] as String?,
     );
   }
 }

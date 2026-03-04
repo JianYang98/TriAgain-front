@@ -107,12 +107,16 @@ class ChallengeProgress {
 
 class CrewMember {
   final String userId;
+  final String nickname;
+  final String? profileImageUrl;
   final String role;
   final DateTime joinedAt;
   final ChallengeProgress? challengeProgress;
 
   const CrewMember({
     required this.userId,
+    required this.nickname,
+    this.profileImageUrl,
     required this.role,
     required this.joinedAt,
     this.challengeProgress,
@@ -121,6 +125,8 @@ class CrewMember {
   factory CrewMember.fromJson(Map<String, dynamic> json) {
     return CrewMember(
       userId: json['userId'] as String,
+      nickname: json['nickname'] as String,
+      profileImageUrl: json['profileImageUrl'] as String?,
       role: json['role'] as String,
       joinedAt: DateTime.parse(json['joinedAt'] as String),
       challengeProgress: json['challengeProgress'] != null

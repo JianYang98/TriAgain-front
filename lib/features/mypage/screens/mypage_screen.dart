@@ -11,6 +11,7 @@ import 'package:triagain/core/network/api_exception.dart';
 import 'package:triagain/models/auth.dart';
 import 'package:triagain/providers/auth_provider.dart';
 import 'package:triagain/services/auth_service.dart';
+import 'package:triagain/providers/crew_provider.dart';
 import 'package:triagain/services/user_service.dart';
 
 class MyPageScreen extends ConsumerStatefulWidget {
@@ -438,6 +439,10 @@ class _MyPageScreenState extends ConsumerState<MyPageScreen> {
     ref.read(authUserProvider.notifier).state = null;
     final storage = ref.read(secureStorageProvider);
     await deleteRefreshToken(storage);
+
+    // 크루 캐시 초기화 — 다른 유저 로그인 시 이전 데이터 방지
+    ref.invalidate(crewListProvider);
+    ref.invalidate(crewDetailProvider);
 
     if (!mounted) return;
     context.go('/login'); // go()로 back stack 교체 → 뒤로가기 방지

@@ -1,13 +1,18 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:kakao_flutter_sdk/kakao_flutter_sdk.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:triagain/core/constants/app_colors.dart';
 import 'package:triagain/core/constants/app_text_styles.dart';
 import 'package:triagain/core/constants/app_sizes.dart';
 import 'package:triagain/core/network/api_exception.dart';
+import 'package:triagain/models/auth.dart';
 import 'package:triagain/providers/auth_provider.dart';
+import 'package:triagain/providers/crew_provider.dart';
 import 'package:triagain/services/auth_service.dart';
 
 class LoginScreen extends ConsumerWidget {
@@ -53,6 +58,26 @@ class LoginScreen extends ConsumerWidget {
                   ),
                 ),
               ),
+              // Apple 로그인 버튼 (iOS만)
+              if (Platform.isIOS) ...[
+                const SizedBox(height: AppSizes.paddingSM),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: SignInWithAppleButton(
+                    text: 'Apple로 로그인',
+                    style: SignInWithAppleButtonStyle.black,
+                    // TODO: Apple Developer 승인 후 _loginWithApple(context, ref) 로 복원
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Apple 로그인은 준비중입니다.'),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
               if (!kReleaseMode) ...[
                 const SizedBox(height: AppSizes.paddingSM),
                 _buildTestUserButton(
@@ -127,6 +152,11 @@ class LoginScreen extends ConsumerWidget {
         final storage = ref.read(secureStorageProvider);
         await saveRefreshToken(storage, result.refreshToken!);
 
+        // 크루 캐시 초기화 — 유저 전환 시 이전 데이터 방지
+        ref.invalidate(crewListProvider);
+
+        debugPrint('로그인 완료: userId=${result.user!.id}');
+
         if (!context.mounted) return;
         context.go('/home');
       } else {
@@ -153,6 +183,82 @@ class LoginScreen extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('로그인에 실패했습니다. 다시 시도해주세요.'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  // ignore: unused_element
+  Future<void> _loginWithApple(BuildContext context, WidgetRef ref) async {
+    try {
+      // 1. Apple SDK 로그인
+      final credential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+
+      final identityToken = credential.identityToken;
+      if (identityToken == null) throw Exception('identityToken is null');
+
+      debugPrint('Apple 로그인 성공: identityToken 획득');
+
+      // 2. POST /auth/apple 호출
+      final authService = ref.read(authServiceProvider);
+      final result = await authService.loginWithApple(identityToken);
+
+      if (!context.mounted) return;
+
+      if (!result.isNewUser) {
+        // 3. 기존 유저 → 토큰 저장 → 홈
+        ref.read(authTokenProvider.notifier).state = result.accessToken;
+        ref.read(authUserIdProvider.notifier).state = result.user!.id;
+        ref.read(authUserProvider.notifier).state = result.user;
+
+        final storage = ref.read(secureStorageProvider);
+        await saveRefreshToken(storage, result.refreshToken!);
+
+        ref.invalidate(crewListProvider);
+
+        debugPrint('Apple 로그인 완료: userId=${result.user!.id}');
+
+        if (!context.mounted) return;
+        context.go('/home');
+      } else {
+        // 4. 신규 유저 → Apple 임시 저장 → 온보딩
+        ref.read(appleIdentityTokenProvider.notifier).state = identityToken;
+        ref.read(appleUserIdProvider.notifier).state = result.appleId;
+
+        // Apple은 이름을 최초 1회만 제공
+        final givenName = credential.givenName ?? '';
+        final familyName = credential.familyName ?? '';
+        final nickname = '$familyName$givenName'.trim();
+        ref.read(appleProfileProvider.notifier).state = KakaoProfile(
+          nickname: nickname.isNotEmpty ? nickname : '',
+          email: result.email ?? credential.email,
+        );
+
+        context.go('/onboarding');
+      }
+    } on ApiException catch (e) {
+      debugPrint('Apple 백엔드 인증 실패: ${e.code} - ${e.message}');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.message),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } catch (error) {
+      debugPrint('Apple 로그인 실패: $error');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Apple 로그인에 실패했습니다. 다시 시도해주세요.'),
             backgroundColor: AppColors.error,
           ),
         );
@@ -239,6 +345,11 @@ class LoginScreen extends ConsumerWidget {
 
       final storage = ref.read(secureStorageProvider);
       await saveRefreshToken(storage, result.refreshToken!);
+
+      // 크루 캐시 초기화 — 유저 전환 시 이전 데이터 방지
+      ref.invalidate(crewListProvider);
+
+      debugPrint('테스트 로그인 완료: userId=${result.user!.id}');
 
       if (!context.mounted) return;
       context.go('/home');

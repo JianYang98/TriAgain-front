@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kakao_flutter_sdk/kakao_flutter_sdk.dart';
 import 'package:triagain/app/router.dart';
 import 'package:triagain/app/theme.dart';
+import 'package:triagain/core/network/api_client.dart';
 import 'package:triagain/providers/auth_provider.dart';
 import 'package:triagain/services/auth_service.dart';
+import 'package:triagain/services/user_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,7 +31,22 @@ void main() async {
 
       if (newAccessToken != null) {
         container.read(authTokenProvider.notifier).state = newAccessToken;
-        initialLocation = '/home';
+
+        // /users/me 호출 → authUser, authUserId 동기화
+        try {
+          final apiClient = container.read(apiClientProvider);
+          final userService = UserService(apiClient);
+          final user = await userService.getMe();
+          container.read(authUserIdProvider.notifier).state = user.id;
+          container.read(authUserProvider.notifier).state = user;
+          initialLocation = '/home';
+          debugPrint('자동 로그인 성공: userId=${user.id}');
+        } catch (_) {
+          // /users/me 실패 → 토큰 무효화, 로그인 화면으로
+          debugPrint('자동 로그인 실패: /users/me 호출 실패');
+          container.read(authTokenProvider.notifier).state = null;
+          await deleteRefreshToken(storage);
+        }
       }
     }
   } catch (_) {

@@ -19,6 +19,7 @@ dependencies:
   uuid: ^4.5.1
   share_plus: ^12.0.1
   kakao_flutter_sdk: ^1.9.6
+  sign_in_with_apple: ^6.1.0
   flutter_secure_storage: ^9.2.4
 
 dev_dependencies:

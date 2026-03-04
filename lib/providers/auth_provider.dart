@@ -17,6 +17,11 @@ final kakaoAccessTokenProvider = StateProvider<String?>((ref) => null);
 final kakaoIdProvider = StateProvider<String?>((ref) => null);
 final kakaoProfileProvider = StateProvider<KakaoProfile?>((ref) => null);
 
+// Apple 온보딩용 임시 저장 — signup 완료 후 즉시 null 처리!
+final appleIdentityTokenProvider = StateProvider<String?>((ref) => null);
+final appleUserIdProvider = StateProvider<String?>((ref) => null);
+final appleProfileProvider = StateProvider<KakaoProfile?>((ref) => null);
+
 // SecureStorage
 const _refreshTokenKey = 'refresh_token';
 

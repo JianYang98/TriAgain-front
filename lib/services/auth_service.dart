@@ -69,6 +69,42 @@ class AuthService {
     }
   }
 
+  /// POST /auth/apple — Apple 로그인
+  Future<KakaoLoginResponse> loginWithApple(String identityToken) async {
+    try {
+      final response = await _dio.post(
+        '/auth/apple',
+        data: {'identityToken': identityToken},
+      );
+      return _parseData(response, KakaoLoginResponse.fromJson);
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
+  /// POST /auth/apple-signup — Apple 회원가입
+  Future<SignupResponse> signupWithApple({
+    required String identityToken,
+    required String appleUserId,
+    required String nickname,
+    required bool termsAgreed,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/auth/apple-signup',
+        data: {
+          'identityToken': identityToken,
+          'appleId': appleUserId,
+          'nickname': nickname,
+          'termsAgreed': termsAgreed,
+        },
+      );
+      return _parseData(response, SignupResponse.fromJson);
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
   /// POST /auth/refresh — 토큰 갱신
   /// 성공 시 새 accessToken 반환, 실패 시 null (refreshToken 삭제)
   Future<String?> refreshAccessToken() async {
@@ -106,14 +142,10 @@ class AuthService {
   /// POST /auth/logout — 로그아웃 (best-effort)
   /// 자체 Dio 사용 — 401 refresh→retry 무한루프 방지
   Future<void> logout() async {
-    final refreshToken = await readRefreshToken(storage);
-    if (refreshToken == null) return;
-
     try {
-      await _dio.post(
-        '/auth/logout',
-        data: {'refreshToken': refreshToken},
-      );
+      // Phase 2에서 Redis 토큰 블랙리스트 구현 시 body 복원 필요
+      // data: {'refreshToken': refreshToken}
+      await _dio.post('/auth/logout');
     } catch (_) {
       // best-effort: 서버 실패해도 무시
       debugPrint('로그아웃 서버 호출 실패 (무시)');
@@ -122,9 +154,9 @@ class AuthService {
 
   T _parseData<T>(Response response, T Function(Map<String, dynamic>) fromJson) {
     final json = response.data as Map<String, dynamic>;
-    final status = json['status'] as String?;
+    final success = json['success'] as bool? ?? true;
 
-    if (status == 'ERROR') {
+    if (!success) {
       final error = json['error'] as Map<String, dynamic>?;
       throw ApiException(
         code: error?['code'] as String? ?? 'UNKNOWN',

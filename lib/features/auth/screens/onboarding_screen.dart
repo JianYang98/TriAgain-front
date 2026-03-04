@@ -7,7 +7,9 @@ import 'package:triagain/core/constants/app_text_styles.dart';
 import 'package:triagain/core/constants/app_sizes.dart';
 import 'package:triagain/core/constants/validation.dart';
 import 'package:triagain/core/network/api_exception.dart';
+import 'package:triagain/models/auth.dart';
 import 'package:triagain/providers/auth_provider.dart';
+import 'package:triagain/providers/crew_provider.dart';
 import 'package:triagain/services/auth_service.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -27,7 +29,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   @override
   void initState() {
     super.initState();
-    final profile = ref.read(kakaoProfileProvider);
+    final kakaoProfile = ref.read(kakaoProfileProvider);
+    final appleProfile = ref.read(appleProfileProvider);
+    final profile = kakaoProfile ?? appleProfile;
     final defaultNickname =
         profile != null ? filterNickname(profile.nickname) : '';
     _nicknameController = TextEditingController(text: defaultNickname);
@@ -72,19 +76,32 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     try {
       final kakaoAccessToken = ref.read(kakaoAccessTokenProvider);
       final kakaoId = ref.read(kakaoIdProvider);
+      final appleIdentityToken = ref.read(appleIdentityTokenProvider);
+      final appleUserId = ref.read(appleUserIdProvider);
 
-      if (kakaoAccessToken == null || kakaoId == null) {
+      final authService = ref.read(authServiceProvider);
+      final SignupResponse result;
+
+      if (kakaoAccessToken != null && kakaoId != null) {
+        // 카카오 회원가입
+        result = await authService.signup(
+          kakaoAccessToken: kakaoAccessToken,
+          kakaoId: kakaoId,
+          nickname: _nicknameController.text,
+          termsAgreed: true,
+        );
+      } else if (appleIdentityToken != null && appleUserId != null) {
+        // Apple 회원가입
+        result = await authService.signupWithApple(
+          identityToken: appleIdentityToken,
+          appleUserId: appleUserId,
+          nickname: _nicknameController.text,
+          termsAgreed: true,
+        );
+      } else {
         if (mounted) context.go('/login');
         return;
       }
-
-      final authService = ref.read(authServiceProvider);
-      final result = await authService.signup(
-        kakaoAccessToken: kakaoAccessToken,
-        kakaoId: kakaoId,
-        nickname: _nicknameController.text,
-        termsAgreed: true,
-      );
 
       // 토큰 저장
       ref.read(authTokenProvider.notifier).state = result.accessToken;
@@ -95,10 +112,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       final storage = ref.read(secureStorageProvider);
       await saveRefreshToken(storage, result.refreshToken);
 
-      // 임시 데이터 즉시 폐기
+      // 임시 데이터 즉시 폐기 (카카오 + Apple 모두)
       ref.read(kakaoAccessTokenProvider.notifier).state = null;
       ref.read(kakaoIdProvider.notifier).state = null;
       ref.read(kakaoProfileProvider.notifier).state = null;
+      ref.read(appleIdentityTokenProvider.notifier).state = null;
+      ref.read(appleUserIdProvider.notifier).state = null;
+      ref.read(appleProfileProvider.notifier).state = null;
+
+      // 크루 캐시 초기화
+      ref.invalidate(crewListProvider);
 
       if (!mounted) return;
       context.go('/home');

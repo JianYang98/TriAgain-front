@@ -4,19 +4,68 @@ import 'package:go_router/go_router.dart';
 import 'package:triagain/core/constants/app_colors.dart';
 import 'package:triagain/core/constants/app_sizes.dart';
 import 'package:triagain/core/constants/app_text_styles.dart';
+import 'package:triagain/core/network/api_exception.dart';
 import 'package:triagain/models/crew.dart';
 import 'package:triagain/providers/crew_provider.dart';
+import 'package:triagain/services/crew_service.dart';
 import 'package:triagain/widgets/app_button.dart';
 import 'package:triagain/widgets/app_card.dart';
 
-class CrewConfirmScreen extends ConsumerWidget {
+class CrewConfirmScreen extends ConsumerStatefulWidget {
   final String crewId;
+  final String? inviteCode;
 
-  const CrewConfirmScreen({super.key, required this.crewId});
+  const CrewConfirmScreen({
+    super.key,
+    required this.crewId,
+    this.inviteCode,
+  });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final crewAsync = ref.watch(crewDetailProvider(crewId));
+  ConsumerState<CrewConfirmScreen> createState() => _CrewConfirmScreenState();
+}
+
+class _CrewConfirmScreenState extends ConsumerState<CrewConfirmScreen> {
+  bool _isJoining = false;
+
+  Future<void> _handleJoin() async {
+    if (widget.inviteCode == null) return;
+    setState(() => _isJoining = true);
+    try {
+      final crewService = ref.read(crewServiceProvider);
+      await crewService.joinCrew(widget.inviteCode!);
+      ref.invalidate(crewListProvider);
+      ref.invalidate(crewByInviteCodeProvider(widget.inviteCode!));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('가입되었습니다!')),
+        );
+        context.go('/home');
+      }
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    } finally {
+      if (mounted) setState(() => _isJoining = false);
+    }
+  }
+
+  String? _getBlockedMessage(String? reason) {
+    return switch (reason) {
+      'CREW_FULL' => '정원이 초과되었습니다',
+      'LATE_JOIN_NOT_ALLOWED' => '이미 시작된 크루입니다',
+      'CREW_ENDED' => '종료된 크루입니다',
+      _ => null,
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final crewAsync = widget.inviteCode != null
+        ? ref.watch(crewByInviteCodeProvider(widget.inviteCode!))
+        : ref.watch(crewDetailProvider(widget.crewId));
 
     return Scaffold(
       body: SafeArea(
@@ -65,8 +114,13 @@ class CrewConfirmScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: AppSizes.paddingSM),
                       TextButton(
-                        onPressed: () =>
-                            ref.invalidate(crewDetailProvider(crewId)),
+                        onPressed: () {
+                          if (widget.inviteCode != null) {
+                            ref.invalidate(crewByInviteCodeProvider(widget.inviteCode!));
+                          } else {
+                            ref.invalidate(crewDetailProvider(widget.crewId));
+                          }
+                        },
                         child: Text(
                           '다시 시도',
                           style: AppTextStyles.body2
@@ -154,17 +208,14 @@ class CrewConfirmScreen extends ConsumerWidget {
           ),
         ),
 
-        // 하단 버튼 — 이미 join 완료 상태이므로 홈으로 이동
+        // 하단 버튼
         Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: AppSizes.paddingMD,
           ),
           child: Column(
             children: [
-              AppButton(
-                text: '시작하기! 🚀',
-                onPressed: () => context.go('/home'),
-              ),
+              _buildBottomButton(context, crew),
               TextButton(
                 onPressed: () => context.go('/home'),
                 child: Text(
@@ -178,6 +229,40 @@ class CrewConfirmScreen extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildBottomButton(BuildContext context, CrewDetail crew) {
+    // ALREADY_MEMBER → 크루 상세로 이동
+    if (crew.joinBlockedReason == 'ALREADY_MEMBER') {
+      return AppButton(
+        text: '크루 보기',
+        onPressed: () => context.push('/crew/${widget.crewId}'),
+      );
+    }
+
+    // 가입 불가 사유 있음
+    final blockedMessage = _getBlockedMessage(crew.joinBlockedReason);
+    if (crew.joinable == false && blockedMessage != null) {
+      return AppButton(
+        text: blockedMessage,
+        onPressed: null,
+      );
+    }
+
+    // 가입 가능
+    if (crew.joinable == true) {
+      return AppButton(
+        text: '크루 참여하기',
+        isLoading: _isJoining,
+        onPressed: _handleJoin,
+      );
+    }
+
+    // fallback (joinable/joinBlockedReason 둘 다 null)
+    return AppButton(
+      text: '확인',
+      onPressed: () => context.go('/home'),
     );
   }
 
@@ -208,15 +293,20 @@ class CrewConfirmScreen extends ConsumerWidget {
           CircleAvatar(
             radius: 20,
             backgroundColor: AppColors.grey2,
-            child: Icon(
-              Icons.person,
-              color: AppColors.grey3,
-              size: 24,
-            ),
+            backgroundImage: member.profileImageUrl != null
+                ? NetworkImage(member.profileImageUrl!)
+                : null,
+            child: member.profileImageUrl == null
+                ? const Icon(
+                    Icons.person,
+                    color: AppColors.grey3,
+                    size: 24,
+                  )
+                : null,
           ),
           const SizedBox(width: 12),
           Text(
-            member.userId,
+            member.nickname,
             style: AppTextStyles.body1.copyWith(color: AppColors.white),
           ),
           if (member.isLeader) ...[

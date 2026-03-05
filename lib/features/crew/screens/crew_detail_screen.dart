@@ -10,8 +10,9 @@ import 'package:triagain/features/crew/widgets/member_status_tab.dart';
 import 'package:triagain/features/crew/widgets/crew_info_bottom_sheet.dart';
 import 'package:triagain/features/crew/widgets/my_verification_tab.dart';
 import 'package:triagain/providers/crew_provider.dart';
+import 'package:triagain/providers/verification_provider.dart';
 
-class CrewDetailScreen extends ConsumerWidget {
+class CrewDetailScreen extends ConsumerStatefulWidget {
   final String crewId;
 
   const CrewDetailScreen({
@@ -20,11 +21,26 @@ class CrewDetailScreen extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final crewAsync = ref.watch(crewDetailProvider(crewId));
+  ConsumerState<CrewDetailScreen> createState() => _CrewDetailScreenState();
+}
+
+class _CrewDetailScreenState extends ConsumerState<CrewDetailScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      ref.invalidate(crewDetailProvider(widget.crewId));
+      ref.invalidate(myVerificationsProvider(widget.crewId));
+      ref.invalidate(feedProvider(widget.crewId));
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final crewAsync = ref.watch(crewDetailProvider(widget.crewId));
 
     return crewAsync.when(
-      data: (crew) => _buildScreen(context, ref, crew),
+      data: (crew) => _buildScreen(context, crew),
       loading: () => Scaffold(
         backgroundColor: AppColors.background,
         body: const Center(
@@ -66,7 +82,7 @@ class CrewDetailScreen extends ConsumerWidget {
                       const SizedBox(height: AppSizes.paddingSM),
                       TextButton(
                         onPressed: () =>
-                            ref.invalidate(crewDetailProvider(crewId)),
+                            ref.invalidate(crewDetailProvider(widget.crewId)),
                         child: Text(
                           '다시 시도',
                           style: AppTextStyles.body2
@@ -84,7 +100,7 @@ class CrewDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildScreen(BuildContext context, WidgetRef ref, CrewDetail crew) {
+  Widget _buildScreen(BuildContext context, CrewDetail crew) {
     return DefaultTabController(
       length: 3,
       child: Scaffold(
@@ -182,9 +198,9 @@ class CrewDetailScreen extends ConsumerWidget {
               Expanded(
                 child: TabBarView(
                   children: [
-                    MyVerificationTab(crewId: crewId),
-                    MemberStatusTab(crewId: crewId),
-                    FeedTab(crewId: crewId),
+                    MyVerificationTab(crewId: widget.crewId),
+                    MemberStatusTab(crewId: widget.crewId),
+                    FeedTab(crewId: widget.crewId),
                   ],
                 ),
               ),

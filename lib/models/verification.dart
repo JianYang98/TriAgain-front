@@ -123,3 +123,33 @@ class VerificationResult {
     );
   }
 }
+
+class MyVerificationsResult {
+  final List<DateTime> verifiedDates;
+  final int streakCount;
+  final int completedChallenges;
+  final MyProgress? myProgress;
+
+  const MyVerificationsResult({
+    required this.verifiedDates,
+    required this.streakCount,
+    required this.completedChallenges,
+    this.myProgress,
+  });
+
+  factory MyVerificationsResult.fromJson(Map<String, dynamic> json) {
+    return MyVerificationsResult(
+      verifiedDates: (json['verifiedDates'] as List)
+          .map((d) => DateTime.parse(d as String))
+          .map((d) => DateTime(d.year, d.month, d.day))
+          .toList(),
+      streakCount: json['streakCount'] as int,
+      completedChallenges: json['completedChallenges'] as int,
+      myProgress: json['myProgress'] != null
+          ? MyProgress.fromJson(json['myProgress'] as Map<String, dynamic>)
+          : null,
+    );
+  }
+
+  Set<DateTime> get verifiedDatesSet => verifiedDates.toSet();
+}

@@ -42,4 +42,13 @@ class VerificationService {
     );
     return response.data!;
   }
+
+  Future<MyVerificationsResult> getMyVerifications(String crewId) async {
+    final response = await _apiClient.get<MyVerificationsResult>(
+      '/crews/$crewId/my-verifications',
+      fromData: (json) =>
+          MyVerificationsResult.fromJson(json as Map<String, dynamic>),
+    );
+    return response.data!;
+  }
 }

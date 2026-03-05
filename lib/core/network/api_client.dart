@@ -1,7 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:triagain/providers/auth_provider.dart';
-import 'package:triagain/providers/crew_provider.dart';
 import 'package:triagain/services/auth_service.dart';
 import 'api_exception.dart';
 import 'api_response.dart';
@@ -68,7 +67,6 @@ class ApiClient {
             _ref.read(authUserProvider.notifier).state = null;
             final storage = _ref.read(secureStorageProvider);
             await deleteRefreshToken(storage);
-            _ref.invalidate(crewListProvider);
           }
           handler.reject(error);
         },

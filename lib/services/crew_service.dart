@@ -57,6 +57,14 @@ class CrewService {
     return response.data!;
   }
 
+  Future<CrewDetail> getCrewByInviteCode(String inviteCode) async {
+    final response = await _apiClient.get<CrewDetail>(
+      '/crews/invite/$inviteCode',
+      fromData: (json) => CrewDetail.fromJson(json as Map<String, dynamic>),
+    );
+    return response.data!;
+  }
+
   Future<JoinCrewResult> joinCrew(String inviteCode) async {
     final response = await _apiClient.post<JoinCrewResult>(
       '/crews/join',

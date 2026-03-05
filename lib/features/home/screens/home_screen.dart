@@ -16,7 +16,7 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final crewsAsync = ref.watch(crewListProvider);
+    final crewsAsync = ref.watch(crewListProvider); // 구독 
 
     return Scaffold(
       appBar: AppBar(
@@ -204,13 +204,12 @@ class HomeScreen extends ConsumerWidget {
                 }
                 try {
                   final crewService = ref.read(crewServiceProvider);
-                  final result = await crewService.joinCrew(code);
-                  ref.invalidate(crewListProvider);
+                  final crew = await crewService.getCrewByInviteCode(code);
                   if (!dialogContext.mounted) return;
                   Navigator.of(dialogContext).pop();
                   if (context.mounted) {
                     context.push(
-                        '/crew/confirm?crewId=${result.crewId}');
+                        '/crew/confirm?crewId=${crew.id}&inviteCode=$code');
                   }
                 } on ApiException catch (e) {
                   if (!dialogContext.mounted) return;
@@ -220,7 +219,7 @@ class HomeScreen extends ConsumerWidget {
                 }
               },
               child: Text(
-                '참여하기',
+                '확인',
                 style: AppTextStyles.body2.copyWith(color: AppColors.main),
               ),
             ),

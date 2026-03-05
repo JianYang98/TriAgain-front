@@ -116,8 +116,10 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
         idempotencyKey: idempotencyKey,
       );
 
-      // 피드 갱신
+      // 전체 탭 갱신
       ref.invalidate(feedProvider(widget.crewId));
+      ref.invalidate(myVerificationsProvider(widget.crewId));
+      ref.invalidate(crewDetailProvider(widget.crewId));
 
       if (!mounted) return;
 

@@ -106,29 +106,31 @@ class ChallengeProgress {
 }
 
 class CrewMember {
-  final String userId;
+  final String? userId;
   final String nickname;
   final String? profileImageUrl;
   final String role;
-  final DateTime joinedAt;
+  final DateTime? joinedAt;
   final ChallengeProgress? challengeProgress;
 
   const CrewMember({
-    required this.userId,
+    this.userId,
     required this.nickname,
     this.profileImageUrl,
     required this.role,
-    required this.joinedAt,
+    this.joinedAt,
     this.challengeProgress,
   });
 
   factory CrewMember.fromJson(Map<String, dynamic> json) {
     return CrewMember(
-      userId: json['userId'] as String,
+      userId: json['userId'] as String?,
       nickname: json['nickname'] as String,
       profileImageUrl: json['profileImageUrl'] as String?,
       role: json['role'] as String,
-      joinedAt: DateTime.parse(json['joinedAt'] as String),
+      joinedAt: json['joinedAt'] != null
+          ? DateTime.parse(json['joinedAt'] as String)
+          : null,
       challengeProgress: json['challengeProgress'] != null
           ? ChallengeProgress.fromJson(
               json['challengeProgress'] as Map<String, dynamic>)
@@ -141,7 +143,7 @@ class CrewMember {
 
 class CrewDetail {
   final String id;
-  final String creatorId;
+  final String? creatorId;
   final String name;
   final String goal;
   final VerificationType verificationType;
@@ -151,14 +153,16 @@ class CrewDetail {
   final DateTime startDate;
   final DateTime endDate;
   final bool allowLateJoin;
-  final String inviteCode;
-  final DateTime createdAt;
+  final String? inviteCode;
+  final DateTime? createdAt;
   final List<CrewMember> members;
   final String? deadlineTime;
+  final bool? joinable;
+  final String? joinBlockedReason;
 
   const CrewDetail({
     required this.id,
-    required this.creatorId,
+    this.creatorId,
     required this.name,
     required this.goal,
     required this.verificationType,
@@ -168,16 +172,18 @@ class CrewDetail {
     required this.startDate,
     required this.endDate,
     required this.allowLateJoin,
-    required this.inviteCode,
-    required this.createdAt,
+    this.inviteCode,
+    this.createdAt,
     required this.members,
     this.deadlineTime,
+    this.joinable,
+    this.joinBlockedReason,
   });
 
   factory CrewDetail.fromJson(Map<String, dynamic> json) {
     return CrewDetail(
       id: json['id'] as String,
-      creatorId: json['creatorId'] as String,
+      creatorId: json['creatorId'] as String?,
       name: json['name'] as String,
       goal: json['goal'] as String,
       verificationType:
@@ -188,12 +194,16 @@ class CrewDetail {
       startDate: DateTime.parse(json['startDate'] as String),
       endDate: DateTime.parse(json['endDate'] as String),
       allowLateJoin: json['allowLateJoin'] as bool,
-      inviteCode: json['inviteCode'] as String,
-      createdAt: DateTime.parse(json['createdAt'] as String),
+      inviteCode: json['inviteCode'] as String?,
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
+          : null,
       members: (json['members'] as List)
           .map((m) => CrewMember.fromJson(m as Map<String, dynamic>))
           .toList(),
       deadlineTime: json['deadlineTime'] as String?,
+      joinable: json['joinable'] as bool?,
+      joinBlockedReason: json['joinBlockedReason'] as String?,
     );
   }
 }

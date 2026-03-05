@@ -73,7 +73,9 @@ class MemberStatusTab extends ConsumerWidget {
     final aCount = a.challengeProgress?.successCount ?? 0;
     final bCount = b.challengeProgress?.successCount ?? 0;
     if (aCount != bCount) return bCount.compareTo(aCount);
-    return a.joinedAt.compareTo(b.joinedAt);
+    final aJoined = a.joinedAt ?? DateTime(2099);
+    final bJoined = b.joinedAt ?? DateTime(2099);
+    return aJoined.compareTo(bJoined);
   }
 
   Widget _buildMemberRow(CrewMember member, {required bool isFirst}) {
@@ -83,9 +85,11 @@ class MemberStatusTab extends ConsumerWidget {
     final target = progress?.targetDays ?? 3;
     final isSuccess = progress?.challengeStatus == 'SUCCESS';
 
-    // N번째 텍스트
+    // N번째 텍스트 (progress가 null이면 아직 챌린지 없음)
     final String attemptText;
-    if (isSuccess) {
+    if (progress == null) {
+      attemptText = '아직 크루 시작 전입니다';
+    } else if (isSuccess) {
       attemptText = '$successCount번째 작심삼일 달성!';
     } else {
       final n = successCount + 1;
@@ -106,11 +110,16 @@ class MemberStatusTab extends ConsumerWidget {
                   CircleAvatar(
                     radius: 24,
                     backgroundColor: AppColors.grey2,
-                    child: const Icon(
-                      Icons.person,
-                      color: AppColors.grey3,
-                      size: 24,
-                    ),
+                    backgroundImage: member.profileImageUrl != null
+                        ? NetworkImage(member.profileImageUrl!)
+                        : null,
+                    child: member.profileImageUrl == null
+                        ? const Icon(
+                            Icons.person,
+                            color: AppColors.grey3,
+                            size: 24,
+                          )
+                        : null,
                   ),
                   if (isFirst)
                     Positioned(
@@ -138,7 +147,7 @@ class MemberStatusTab extends ConsumerWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                member.userId,
+                member.nickname,
                 style: AppTextStyles.caption
                     .copyWith(color: AppColors.grey4),
                 overflow: TextOverflow.ellipsis,
@@ -160,7 +169,9 @@ class MemberStatusTab extends ConsumerWidget {
                   Text(
                     attemptText,
                     style: AppTextStyles.body2.copyWith(
-                      color: isSuccess ? AppColors.main : AppColors.white,
+                      color: progress == null
+                          ? AppColors.grey3
+                          : (isSuccess ? AppColors.main : AppColors.white),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -187,8 +198,17 @@ class MemberStatusTab extends ConsumerWidget {
                   ],
                 ],
               ),
-              const SizedBox(height: 6),
-              _buildProgressBar(completed, target, isSuccess),
+              if (progress != null) ...[
+                const SizedBox(height: 6),
+                _buildProgressBar(completed, target, isSuccess),
+              ] else ...[
+                const SizedBox(height: 6),
+                Text(
+                  '앞으로 작심삼일을 달성해요!',
+                  style: AppTextStyles.caption
+                      .copyWith(color: AppColors.grey3),
+                ),
+              ],
             ],
           ),
         ),

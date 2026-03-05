@@ -440,9 +440,9 @@ class _MyPageScreenState extends ConsumerState<MyPageScreen> {
     final storage = ref.read(secureStorageProvider);
     await deleteRefreshToken(storage);
 
-    // 크루 캐시 초기화 — 다른 유저 로그인 시 이전 데이터 방지
-    ref.invalidate(crewListProvider);
+    // crewDetailProvider, crewByInviteCodeProvider는 authTokenProvider watch 안 하므로 수동 초기화
     ref.invalidate(crewDetailProvider);
+    ref.invalidate(crewByInviteCodeProvider);
 
     if (!mounted) return;
     context.go('/login'); // go()로 back stack 교체 → 뒤로가기 방지

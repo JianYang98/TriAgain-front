@@ -122,7 +122,7 @@ class CrewInfoBottomSheet extends StatelessWidget {
                     child: OutlinedButton.icon(
                       onPressed: () {
                         Clipboard.setData(
-                          ClipboardData(text: crew.inviteCode),
+                          ClipboardData(text: crew.inviteCode ?? ''),
                         );
                         final messenger = ScaffoldMessenger.of(context);
                         Navigator.of(context).pop();
@@ -208,15 +208,20 @@ class CrewInfoBottomSheet extends StatelessWidget {
           CircleAvatar(
             radius: 20,
             backgroundColor: AppColors.grey2,
-            child: const Icon(
-              Icons.person,
-              color: AppColors.grey3,
-              size: 24,
-            ),
+            backgroundImage: member.profileImageUrl != null
+                ? NetworkImage(member.profileImageUrl!)
+                : null,
+            child: member.profileImageUrl == null
+                ? const Icon(
+                    Icons.person,
+                    color: AppColors.grey3,
+                    size: 24,
+                  )
+                : null,
           ),
           const SizedBox(width: 12),
           Text(
-            member.userId,
+            member.nickname,
             style: AppTextStyles.body1.copyWith(color: AppColors.white),
           ),
           if (member.isLeader) ...[

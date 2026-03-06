@@ -37,7 +37,8 @@ class MemberStatusTab extends ConsumerWidget {
               ),
               for (int i = 0; i < members.length; i++) ...[
                 if (i > 0) const SizedBox(height: AppSizes.paddingMD),
-                _buildMemberRow(members[i], isFirst: i == 0),
+                _buildMemberRow(members[i],
+                    crewStatus: crew.status, isFirst: i == 0),
               ],
             ],
           ),
@@ -70,30 +71,50 @@ class MemberStatusTab extends ConsumerWidget {
   }
 
   int _compareMember(CrewMember a, CrewMember b) {
-    final aCount = a.challengeProgress?.successCount ?? 0;
-    final bCount = b.challengeProgress?.successCount ?? 0;
-    if (aCount != bCount) return bCount.compareTo(aCount);
+    if (a.successCount != b.successCount) {
+      return b.successCount.compareTo(a.successCount);
+    }
     final aJoined = a.joinedAt ?? DateTime(2099);
     final bJoined = b.joinedAt ?? DateTime(2099);
     return aJoined.compareTo(bJoined);
   }
 
-  Widget _buildMemberRow(CrewMember member, {required bool isFirst}) {
+  Widget _buildMemberRow(CrewMember member,
+      {required CrewStatus crewStatus, required bool isFirst}) {
     final progress = member.challengeProgress;
-    final successCount = progress?.successCount ?? 0;
+    final successCount = member.successCount;
     final completed = progress?.completedDays ?? 0;
     final target = progress?.targetDays ?? 3;
     final isSuccess = progress?.challengeStatus == 'SUCCESS';
 
-    // N번째 텍스트 (progress가 null이면 아직 챌린지 없음)
+    // 크루 상태별 텍스트 분기
     final String attemptText;
-    if (progress == null) {
+    if (crewStatus == CrewStatus.recruiting) {
       attemptText = '아직 크루 시작 전입니다';
-    } else if (isSuccess) {
-      attemptText = '$successCount번째 작심삼일 달성!';
+    } else if (crewStatus == CrewStatus.completed) {
+      attemptText =
+          successCount > 0 ? '작심삼일 $successCount회 달성' : '달성 기록 없음';
     } else {
-      final n = successCount + 1;
-      attemptText = '$n번째 작심삼일 달성중';
+      // ACTIVE
+      if (successCount > 0) {
+        attemptText = '작심삼일 $successCount회 달성 🔥';
+      } else if (progress != null) {
+        attemptText = '1번째 작심삼일 달성중';
+      } else {
+        attemptText = '';
+      }
+    }
+
+    // 텍스트 색상
+    final Color attemptColor;
+    if (crewStatus == CrewStatus.recruiting) {
+      attemptColor = AppColors.grey3;
+    } else if (successCount > 0) {
+      attemptColor = AppColors.main;
+    } else if (progress != null) {
+      attemptColor = AppColors.white;
+    } else {
+      attemptColor = AppColors.grey3;
     }
 
     return Row(
@@ -166,17 +187,17 @@ class MemberStatusTab extends ConsumerWidget {
               const SizedBox(height: 2),
               Row(
                 children: [
-                  Text(
-                    attemptText,
-                    style: AppTextStyles.body2.copyWith(
-                      color: progress == null
-                          ? AppColors.grey3
-                          : (isSuccess ? AppColors.main : AppColors.white),
-                      fontWeight: FontWeight.w500,
+                  if (attemptText.isNotEmpty)
+                    Text(
+                      attemptText,
+                      style: AppTextStyles.body2.copyWith(
+                        color: attemptColor,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                  ),
                   if (member.isLeader) ...[
-                    const SizedBox(width: AppSizes.paddingXS),
+                    if (attemptText.isNotEmpty)
+                      const SizedBox(width: AppSizes.paddingXS),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 6,
@@ -198,16 +219,16 @@ class MemberStatusTab extends ConsumerWidget {
                   ],
                 ],
               ),
-              if (progress != null) ...[
-                const SizedBox(height: 6),
-                _buildProgressBar(completed, target, isSuccess),
-              ] else ...[
+              if (crewStatus == CrewStatus.recruiting) ...[
                 const SizedBox(height: 6),
                 Text(
                   '앞으로 작심삼일을 달성해요!',
                   style: AppTextStyles.caption
                       .copyWith(color: AppColors.grey3),
                 ),
+              ] else ...[
+                const SizedBox(height: 6),
+                _buildProgressBar(completed, target, isSuccess),
               ],
             ],
           ),

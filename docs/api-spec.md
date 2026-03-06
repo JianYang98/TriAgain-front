@@ -266,13 +266,195 @@ Authorization: Bearer <token>
 
 ---
 
+### GET /crews/invite/{inviteCode} (초대코드로 크루 미리보기)
+
+초대코드로 크루 정보를 미리 조회한다. 가입하지 않고 조회만 수행하며, 가입 가능 여부(joinable)와 차단 사유(joinBlockedReason)를 함께 반환한다.
+
+**요청 (Request)**
+```
+GET /crews/invite/ABC123 HTTP/1.1
+Authorization: Bearer <token>
+```
+
+**성공 응답 (200 OK)**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "crew_123",
+    "name": "작심삼일 크루",
+    "goal": "매일 운동하기",
+    "verificationType": "PHOTO",
+    "maxMembers": 10,
+    "currentMembers": 3,
+    "status": "RECRUITING",
+    "startDate": "2026-03-10",
+    "endDate": "2026-03-24",
+    "allowLateJoin": true,
+    "deadlineTime": "23:59:59",
+    "members": [
+      {
+        "nickname": "크루장닉네임",
+        "profileImageUrl": "https://...",
+        "role": "LEADER"
+      },
+      {
+        "nickname": "멤버닉네임",
+        "profileImageUrl": null,
+        "role": "MEMBER"
+      }
+    ],
+    "joinable": true,
+    "joinBlockedReason": null
+  },
+  "error": null
+}
+```
+
+**필드 설명:**
+- `joinable`: 현재 유저가 이 크루에 가입 가능한지 여부
+- `joinBlockedReason`: 가입 불가 시 사유 (joinable=true이면 null)
+
+**joinBlockedReason 값:**
+
+| 값 | 설명 |
+|------|------|
+| `ALREADY_MEMBER` | 이미 가입한 크루 |
+| `CREW_ENDED` | 크루가 종료(COMPLETED)됨 |
+| `CREW_FULL` | 정원 초과 |
+| `LATE_JOIN_NOT_ALLOWED` | 중간 가입 비허용 (ACTIVE 크루) |
+| `CREW_JOIN_DEADLINE_PASSED` | 참여 마감 기한 초과 |
+
+**에러 응답**
+| HTTP | 코드 | 메시지 | 설명 |
+|------|------|--------|------|
+| 404 | CR006 | 유효하지 않은 초대 코드입니다. | 존재하지 않는 초대코드 |
+
+---
+
+### POST /crews/join (초대코드로 크루 참여)
+
+초대코드를 사용하여 크루에 참여한다. 크루가 RECRUITING 상태이고, 정원이 남아있는 경우에만 참여 가능.
+
+**요청 (Request)**
+```
+POST /crews/join HTTP/1.1
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+```json
+{
+  "inviteCode": "ABC123"
+}
+```
+
+**필드 설명:**
+- `inviteCode`: (필수) 크루 초대코드 (6자리)
+
+**성공 응답 (201 Created)**
+```json
+{
+  "success": true,
+  "data": {
+    "userId": "1234567890",
+    "crewId": "crew_123",
+    "role": "MEMBER",
+    "currentMembers": 3,
+    "joinedAt": "2026-03-04T10:00:00Z"
+  },
+  "error": null
+}
+```
+
+**에러 응답**
+| HTTP | 코드 | 메시지 | 설명 |
+|------|------|--------|------|
+| 400 | CR003 | 모집 중인 크루가 아닙니다. | 크루 상태가 RECRUITING이 아님 |
+| 400 | CR008 | 크루 참여 마감 기한이 지났습니다. | 중간 가입 불가 시 기한 초과 |
+| 404 | CR006 | 유효하지 않은 초대 코드입니다. | 존재하지 않는 초대코드 |
+| 409 | CR002 | 크루 정원이 가득 찼습니다. | 정원 초과 |
+| 409 | CR004 | 이미 참여 중인 크루입니다. | 중복 참여 |
+
+---
+
+### GET /crews/{crewId} (크루 상세 조회)
+
+크루 멤버가 크루 상세 화면을 볼 때 사용. 멤버별 챌린지 현황과 달성 횟수를 포함한다.
+
+**요청 (Request)**
+```
+GET /crews/{crewId} HTTP/1.1
+Authorization: Bearer <token>
+```
+
+**성공 응답 (200 OK)**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "crew-uuid",
+    "creatorId": "user-uuid",
+    "name": "새벽 러닝 크루",
+    "goal": "매일 아침 5km 러닝",
+    "verificationType": "PHOTO",
+    "maxMembers": 5,
+    "currentMembers": 3,
+    "status": "ACTIVE",
+    "startDate": "2026-03-10",
+    "endDate": "2026-03-24",
+    "allowLateJoin": true,
+    "inviteCode": "ABC123",
+    "createdAt": "2026-03-01T10:00:00",
+    "deadlineTime": "23:59:59",
+    "members": [
+      {
+        "userId": "user-uuid-1",
+        "nickname": "크루장닉네임",
+        "profileImageUrl": "https://...",
+        "role": "LEADER",
+        "joinedAt": "2026-03-01T10:00:00",
+        "successCount": 2,
+        "challengeProgress": {
+          "challengeStatus": "IN_PROGRESS",
+          "completedDays": 1,
+          "targetDays": 3
+        }
+      },
+      {
+        "userId": "user-uuid-2",
+        "nickname": "멤버닉네임",
+        "profileImageUrl": null,
+        "role": "MEMBER",
+        "joinedAt": "2026-03-02T14:00:00",
+        "successCount": 0,
+        "challengeProgress": null
+      }
+    ]
+  },
+  "error": null
+}
+```
+
+**필드 설명:**
+- `successCount`: 해당 크루에서의 작심삼일(3일 연속 인증) 달성 횟수. 활성 챌린지 유무와 무관하게 항상 표시
+- `challengeProgress`: 현재 진행 중인 챌린지 (없으면 null)
+  - `challengeStatus`: IN_PROGRESS / SUCCESS / FAILED / ENDED
+  - `completedDays`: 현재 사이클 진행일 (0~3)
+  - `targetDays`: 3
+
+**에러 응답**
+| HTTP | 코드 | 메시지 | 설명 |
+|------|------|--------|------|
+| 403 | — | 크루 멤버만 조회할 수 있습니다. | 비멤버 접근 |
+| 404 | — | 존재하지 않는 크루입니다. | 잘못된 crewId |
+
+---
+
 ## TODO (구현 시 추가 예정)
 
 ### Crew Context
 - POST /crews — 크루 생성
-- POST /crews/{crewId}/join — 크루 참여
 - GET /crews — 크루 목록 조회
-- GET /crews/{crewId} — 크루 상세 조회
 
 ### Verification Context
 - GET /crews/{crewId}/feed — 크루 피드 조회

@@ -42,5 +42,5 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Local dev scripts (contains API keys)
-run_dev.sh
+# 환경별 실행 스크립트 (API 키/서버 IP 포함)
+*_run.sh

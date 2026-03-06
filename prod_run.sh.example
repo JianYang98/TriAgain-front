@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -euo pipefail
+flutter run \
+  --dart-define=KAKAO_NATIVE_KEY=YOUR_KAKAO_KEY \
+  --dart-define=BASE_URL=http://YOUR_SERVER_IP:8080

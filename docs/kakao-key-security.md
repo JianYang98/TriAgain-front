@@ -18,7 +18,7 @@
 2. 내 애플리케이션 → TriAgain 선택
 3. 앱 키 → **네이티브 앱 키 재발급**
 4. 새 키로 아래 파일 업데이트:
-   - `run_dev.sh` — `KAKAO_NATIVE_KEY=<새키>`
+   - `dev_run.sh` — `KAKAO_NATIVE_KEY=<새키>`
    - `ios/Runner/Info.plist` — URL scheme `kakao<새키>`로 교체
    - `android/app/src/main/AndroidManifest.xml` — 카카오 관련 scheme 확인
 5. CI/CD 환경변수도 새 키로 교체
@@ -27,7 +27,7 @@
 
 ## 로컬 개발
 
-프로젝트 루트에 `run_dev.sh`가 있음 (`.gitignore`에 포함, 커밋되지 않음):
+프로젝트 루트에 `dev_run.sh`가 있음 (`.gitignore`에 포함, 커밋되지 않음):
 
 ```bash
 #!/usr/bin/env bash
@@ -36,8 +36,8 @@ flutter run --dart-define=KAKAO_NATIVE_KEY=<실제_카카오_키>
 ```
 
 **처음 세팅 시:**
-1. `run_dev.sh`에서 `__PUT_YOUR_KEY_HERE__`를 실제 키로 교체
-2. `./run_dev.sh`로 실행
+1. `dev_run.sh`에서 `__PUT_YOUR_KEY_HERE__`를 실제 키로 교체
+2. `./dev_run.sh`로 실행
 
 **`--dart-define` 없이 실행하면:**
 - 앱 자체는 정상 실행

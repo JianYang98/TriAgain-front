@@ -1,11 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:triagain/core/constants/app_config.dart';
 import 'package:triagain/providers/auth_provider.dart';
 import 'package:triagain/services/auth_service.dart';
 import 'api_exception.dart';
 import 'api_response.dart';
-
-const _baseUrl = 'http://localhost:8080';
 
 final apiClientProvider = Provider<ApiClient>((ref) {
   return ApiClient(ref: ref);
@@ -19,7 +18,7 @@ class ApiClient {
   ApiClient({required Ref ref}) : _ref = ref {
     _dio = Dio(
       BaseOptions(
-        baseUrl: _baseUrl,
+        baseUrl: AppConfig.baseUrl,
         connectTimeout: const Duration(seconds: 10),
         receiveTimeout: const Duration(seconds: 10),
         headers: {'Content-Type': 'application/json'},

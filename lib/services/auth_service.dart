@@ -2,11 +2,10 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:triagain/core/constants/app_config.dart';
 import 'package:triagain/core/network/api_exception.dart';
 import 'package:triagain/models/auth.dart';
 import 'package:triagain/providers/auth_provider.dart';
-
-const _baseUrl = 'http://localhost:8080'; // 이거 나중에 수정보자! 
 
 final authServiceProvider = Provider<AuthService>((ref) {
   final storage = ref.watch(secureStorageProvider);
@@ -20,7 +19,7 @@ class AuthService {
   AuthService({required this.storage}) {
     _dio = Dio(
       BaseOptions(
-        baseUrl: _baseUrl,
+        baseUrl: AppConfig.baseUrl,
         connectTimeout: const Duration(seconds: 10),
         receiveTimeout: const Duration(seconds: 10),
         headers: {'Content-Type': 'application/json'},

@@ -78,7 +78,7 @@ class LoginScreen extends ConsumerWidget {
                   ),
                 ),
               ],
-              if (!kReleaseMode) ...[
+              if (kDebugMode) ...[
                 const SizedBox(height: AppSizes.paddingSM),
                 _buildTestUserButton(
                   context,

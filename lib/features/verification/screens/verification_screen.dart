@@ -101,6 +101,16 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
       return;
     }
 
+    if (!_isPhotoRequired && _textController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('텍스트 인증을 입력해주세요'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isSubmitting = true);
 
     try {
@@ -165,18 +175,22 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (_isPhotoRequired) ...[
+                      Text(
+                        '📸 사진 인증',
+                        style: AppTextStyles.heading3
+                            .copyWith(color: AppColors.white),
+                      ),
+                      const SizedBox(height: AppSizes.paddingSM),
+                      _buildPhotoArea(),
+                      const SizedBox(height: AppSizes.paddingSM),
+                      _buildPhotoButtons(),
+                      const SizedBox(height: AppSizes.paddingLG),
+                    ],
                     Text(
-                      _isPhotoRequired ? '📸 사진 인증' : '📸 사진 인증 (선택)',
-                      style: AppTextStyles.heading3
-                          .copyWith(color: AppColors.white),
-                    ),
-                    const SizedBox(height: AppSizes.paddingSM),
-                    _buildPhotoArea(),
-                    const SizedBox(height: AppSizes.paddingSM),
-                    _buildPhotoButtons(),
-                    const SizedBox(height: AppSizes.paddingLG),
-                    Text(
-                      '✍️ 오늘의 한마디 (선택)',
+                      _isPhotoRequired
+                          ? '✍️ 오늘의 한마디 (선택)'
+                          : '✍️ 오늘의 인증',
                       style: AppTextStyles.heading3
                           .copyWith(color: AppColors.white),
                     ),

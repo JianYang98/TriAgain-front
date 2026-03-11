@@ -1,0 +1,71 @@
+name: FE PR Fix
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  fix:
+    if: >
+      github.event.issue.pull_request != null &&
+      startsWith(github.event.comment.body, '/fix')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get PR branch
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_NUMBER=${{ github.event.issue.number }}
+          BRANCH=$(gh pr view $PR_NUMBER --repo ${{ github.repository }} --json headRefName -q .headRefName)
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.pr.outputs.branch }}
+          fetch-depth: 0
+
+      - name: Generate fix_prompt.md
+        run: |
+          {
+            echo "# Frontend PR Fix Request"
+            echo ""
+            echo "PR: #${{ github.event.issue.number }}"
+            echo "Comment: ${{ github.event.comment.body }}"
+            echo ""
+            echo "---"
+            echo ""
+            cat agents/fe_fix_agent.md
+            echo ""
+            echo "---"
+            echo ""
+            cat CLAUDE.md
+          } > fix_prompt.md
+
+      - name: Generate fix result (placeholder)
+        run: |
+          {
+            echo "## 🔧 FE Auto Fix"
+            echo ""
+            echo "\`/fix\` 요청이 감지되었습니다."
+            echo ""
+            echo "### 상태"
+            echo "- fix_prompt.md 생성 완료"
+            echo "- 다음 단계: Codex 실제 수정 연결"
+            echo ""
+            echo "### 주의"
+            echo "- 현재는 placeholder 단계이며 실제 코드 수정은 수행하지 않음"
+          } > fix_result.md
+
+      - name: Comment on PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment ${{ github.event.issue.number }} --body-file fix_result.md

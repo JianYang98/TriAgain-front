@@ -198,7 +198,21 @@ lib/
 - COMPLETED 이벤트 수신 시 자동으로 `/verifications` 호출
 - SSE 타임아웃: 30초 → 실패 시 사용자에게 재시도 안내
 - SSE 연결 끊김 fallback: `GET /upload-sessions/{id}`로 폴링하여 상태 확인
+--
 
+## API Rules
+
+- Screen/Widget에서 직접 Dio를 호출하지 않는다.
+- API 호출은 service 계층 또는 provider/notifier를 통해 수행한다.
+- 응답 파싱과 에러 처리는 가능한 한 UI 밖에서 처리한다.
+
+--
+## State Management Rules
+
+- 기본 상태관리는 Riverpod를 우선 사용한다.
+- 로컬 UI 상태만 StatefulWidget/local state로 허용한다.
+- 비즈니스 상태와 API 결과는 provider/notifier에서 관리한다.
+- 위젯은 렌더링과 사용자 입력 처리에 집중한다.
 ---
 
 ## 개발 순서

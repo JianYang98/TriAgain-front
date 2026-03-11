@@ -23,17 +23,45 @@ jobs:
         run: |
           git diff --name-only HEAD^ HEAD > changed_files.txt
 
-      - name: Install GitHub CLI
+      - name: Generate review_prompt.md
         run: |
-          sudo apt update
-          sudo apt install gh -y
+          {
+            echo "# Frontend PR Review Request"
+            echo ""
+            echo "PR: #${{ github.event.pull_request.number }}"
+            echo "Base: ${{ github.base_ref }}"
+            echo "Head: ${{ github.head_ref }}"
+            echo ""
+            echo "---"
+            echo ""
+            cat agents/codex_fe_pr_review.md
+            echo ""
+            echo "---"
+            echo ""
+            cat CLAUDE.md
+            echo ""
+            echo "---"
+            echo ""
+            echo "## Changed Files"
+            cat changed_files.txt
+          } > review_prompt.md
 
-      - name: Create review comment
+      - name: Generate review comment (placeholder)
         run: |
-          echo "## 🤖 FE PR Review" > review.md
-          echo "" >> review.md
-          echo "Changed files:" >> review.md
-          cat changed_files.txt >> review.md
+          {
+            echo "## 🤖 FE PR Review"
+            echo ""
+            echo "리뷰 워크플로우가 실행되었습니다."
+            echo ""
+            echo "### 변경 파일"
+            echo '```text'
+            cat changed_files.txt
+            echo '```'
+            echo ""
+            echo "### 상태"
+            echo "- review_prompt.md 생성 완료"
+            echo "- 다음 단계: Codex 실제 호출 연결"
+          } > review.md
 
       - name: Comment on PR
         env:

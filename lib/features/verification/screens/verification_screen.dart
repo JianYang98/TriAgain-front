@@ -337,7 +337,7 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
     }
   }
 
-  void _invalidateProviders() {
+  void _invalidateProviders() {  
     ref.invalidate(feedProvider(widget.crewId));
     ref.invalidate(myVerificationsProvider(widget.crewId));
     ref.invalidate(crewDetailProvider(widget.crewId));

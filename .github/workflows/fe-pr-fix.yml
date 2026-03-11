@@ -5,7 +5,7 @@ on:
     types: [created]
 
 permissions:
-  contents: write
+  contents: read
   pull-requests: write
   issues: write
 
@@ -42,7 +42,7 @@ jobs:
             echo ""
             echo "---"
             echo ""
-            cat agents/fe_fix_agent.md
+            cat agents/codex_fe_fix_agent.md
             echo ""
             echo "---"
             echo ""
@@ -58,14 +58,57 @@ jobs:
             echo ""
             echo "### 상태"
             echo "- fix_prompt.md 생성 완료"
-            echo "- 다음 단계: Codex 실제 수정 연결"
+            echo "- 다음 단계: Codex FE Fix Agent 실제 연결"
             echo ""
             echo "### 주의"
             echo "- 현재는 placeholder 단계이며 실제 코드 수정은 수행하지 않음"
           } > fix_result.md
 
+      - name: Generate fix_review_prompt.md
+        run: |
+          {
+            echo "# Fix Review Request"
+            echo ""
+            echo "---"
+            echo ""
+            cat agents/codex_fix_review_agent.md
+            echo ""
+            echo "---"
+            echo ""
+            cat CLAUDE.md
+            echo ""
+            echo "---"
+            echo ""
+            cat fix_result.md
+          } > fix_review_prompt.md
+
+      - name: Generate fix review result (placeholder)
+        run: |
+          {
+            echo "## ✅ FE Fix Review"
+            echo ""
+            echo "Fix Review Agent 검증 단계가 실행되었습니다."
+            echo ""
+            echo "### 상태"
+            echo "- fix_review_prompt.md 생성 완료"
+            echo "- 다음 단계: Codex Fix Review Agent 실제 연결"
+            echo ""
+            echo "### 최종 판단"
+            echo "- 현재는 placeholder 단계이며 실제 검증은 수행하지 않음"
+          } > fix_review_result.md
+
+      - name: Compose final PR comment
+        run: |
+          {
+            cat fix_result.md
+            echo ""
+            echo "---"
+            echo ""
+            cat fix_review_result.md
+          } > final_fix_comment.md
+
       - name: Comment on PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh pr comment ${{ github.event.issue.number }} --body-file fix_result.md
+          gh pr comment ${{ github.event.issue.number }} --body-file final_fix_comment.md

@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,10 +12,21 @@ import 'package:triagain/core/constants/app_sizes.dart';
 import 'package:triagain/core/constants/app_text_styles.dart';
 import 'package:triagain/core/network/api_exception.dart';
 import 'package:triagain/models/crew.dart';
+import 'package:triagain/models/upload_session.dart';
 import 'package:triagain/providers/crew_provider.dart';
 import 'package:triagain/providers/verification_provider.dart';
+import 'package:triagain/services/upload_session_service.dart';
 import 'package:triagain/services/verification_service.dart';
 import 'package:triagain/widgets/app_button.dart';
+
+enum _UploadPhase {
+  idle,
+  creatingSession,
+  uploadingS3,
+  waitingConfirm,
+  pollingFallback,
+  creatingVerification,
+}
 
 class VerificationScreen extends ConsumerStatefulWidget {
   final String crewId;
@@ -34,11 +47,19 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
   final _textController = TextEditingController();
   final _imagePicker = ImagePicker();
   File? _selectedImage;
-  bool _isSubmitting = false;
+
+  _UploadPhase _uploadPhase = _UploadPhase.idle;
+  double _uploadProgress = 0.0;
+  StreamSubscription? _sseSubscription;
+  CancelToken? _uploadCancelToken;
+
+  bool get _isSubmitting => _uploadPhase != _UploadPhase.idle;
 
   @override
   void dispose() {
     _textController.dispose();
+    _sseSubscription?.cancel();
+    _uploadCancelToken?.cancel();
     super.dispose();
   }
 
@@ -51,6 +72,8 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
   }
 
   Future<void> _pickImage(ImageSource source) async {
+    if (_isSubmitting) return;
+
     if (source == ImageSource.camera) {
       final hasCamera = _imagePicker.supportsImageSource(ImageSource.camera);
       if (!hasCamera) {
@@ -68,9 +91,9 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
     try {
       final picked = await _imagePicker.pickImage(
         source: source,
-        maxWidth: 1024,
-        maxHeight: 1024,
-        imageQuality: 85,
+        maxWidth: 960,
+        maxHeight: 960,
+        imageQuality: 70,
       );
       if (picked != null) {
         setState(() => _selectedImage = File(picked.path));
@@ -111,14 +134,21 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
       return;
     }
 
-    setState(() => _isSubmitting = true);
+    if (_isPhotoRequired && _selectedImage != null) {
+      await _handlePhotoVerification();
+    } else {
+      await _handleTextVerification();
+    }
+  }
+
+  Future<void> _handleTextVerification() async {
+    setState(() => _uploadPhase = _UploadPhase.creatingVerification);
 
     try {
       final verificationService = ref.read(verificationServiceProvider);
       final idempotencyKey = const Uuid().v4();
       final textContent = _textController.text.trim();
 
-      // 텍스트 인증만 (사진 업로드는 3단계에서 구현)
       await verificationService.createVerification(
         challengeId: widget.challengeId,
         crewId: widget.crewId,
@@ -126,39 +156,253 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
         idempotencyKey: idempotencyKey,
       );
 
-      // 전체 탭 갱신
-      ref.invalidate(feedProvider(widget.crewId));
-      ref.invalidate(myVerificationsProvider(widget.crewId));
-      ref.invalidate(crewDetailProvider(widget.crewId));
-
+      _invalidateProviders();
       if (!mounted) return;
-
-      showDialog(
-        context: context,
-        builder: (_) => AlertDialog(
-          backgroundColor: AppColors.card,
-          content: Text(
-            '인증이 완료되었습니다! 🎉',
-            style: AppTextStyles.body1.copyWith(color: AppColors.white),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-                context.pop();
-              },
-              child: Text('확인', style: TextStyle(color: AppColors.main)),
-            ),
-          ],
-        ),
-      );
+      _showSuccessDialog();
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
-      );
+      _showErrorSnackBar(e.message);
     } finally {
-      if (mounted) setState(() => _isSubmitting = false);
+      if (mounted) setState(() => _uploadPhase = _UploadPhase.idle);
+    }
+  }
+
+  Future<void> _handlePhotoVerification() async {
+    final file = _selectedImage!;
+    final uploadService = ref.read(uploadSessionServiceProvider);
+    final verificationService = ref.read(verificationServiceProvider);
+    final idempotencyKey = const Uuid().v4();
+    _uploadCancelToken = CancelToken();
+
+    try {
+      // 1. 업로드 세션 생성
+      setState(() => _uploadPhase = _UploadPhase.creatingSession);
+
+      final challengeId = widget.challengeId;
+      if (challengeId == null) {
+        _showErrorSnackBar('챌린지 정보를 찾을 수 없습니다.');
+        return;
+      }
+
+      final session = await uploadService.createUploadSession(
+        file: file,
+        challengeId: challengeId,
+      );
+
+      if (!mounted) return;
+
+      // 2. SSE 구독 시작 (S3 업로드 전에 열어야 이벤트 놓치지 않음)
+      setState(() => _uploadPhase = _UploadPhase.waitingConfirm);
+
+      final sseCompleter = Completer<UploadSessionEvent>();
+      _sseSubscription = uploadService
+          .subscribeToUploadEvents(session.uploadSessionId)
+          .timeout(const Duration(seconds: 60))
+          .listen(
+        (event) {
+          if (!sseCompleter.isCompleted) sseCompleter.complete(event);
+        },
+        onError: (error) {
+          if (!sseCompleter.isCompleted) {
+            sseCompleter.complete(UploadSessionEvent.error);
+          }
+        },
+      );
+
+      // 3. S3 업로드
+      if (!mounted) return;
+      setState(() {
+        _uploadPhase = _UploadPhase.uploadingS3;
+        _uploadProgress = 0.0;
+      });
+
+      final mimeType = _getMimeTypeFromFile(file);
+
+      // presignedUrl 만료 확인
+      if (session.isExpired) {
+        _showErrorSnackBar('업로드 URL이 만료되었습니다. 다시 시도해주세요.');
+        return;
+      }
+
+      await uploadService.uploadToS3(
+        file: file,
+        presignedUrl: session.presignedUrl,
+        mimeType: mimeType,
+        onProgress: (progress) {
+          if (mounted) setState(() => _uploadProgress = progress);
+        },
+        cancelToken: _uploadCancelToken,
+      );
+
+      if (!mounted) return;
+
+      // 4. SSE 이벤트 대기 (이미 구독 중)
+      setState(() => _uploadPhase = _UploadPhase.waitingConfirm);
+
+      UploadSessionEvent event;
+      try {
+        event = await sseCompleter.future
+            .timeout(const Duration(seconds: 60));
+      } on TimeoutException {
+        // SSE 타임아웃 → polling fallback
+        if (!mounted) return;
+        setState(() => _uploadPhase = _UploadPhase.pollingFallback);
+        event = await uploadService.pollUploadSessionStatus(
+          session.uploadSessionId,
+        );
+      }
+
+      if (!mounted) return;
+
+      // 5. 이벤트 타입별 처리
+      switch (event) {
+        case UploadSessionEvent.completed:
+          setState(() => _uploadPhase = _UploadPhase.creatingVerification);
+          final textContent = _textController.text.trim();
+
+          await _createVerificationWithRetry(
+            verificationService: verificationService,
+            crewId: widget.crewId,
+            challengeId: widget.challengeId,
+            uploadSessionId: session.uploadSessionId,
+            textContent: textContent.isNotEmpty ? textContent : null,
+            idempotencyKey: idempotencyKey,
+          );
+
+          _invalidateProviders();
+          if (!mounted) return;
+          _showSuccessDialog();
+
+        case UploadSessionEvent.expired:
+          if (!mounted) return;
+          _showErrorSnackBar('업로드 세션이 만료되었습니다. 다시 시도해주세요.');
+
+        case UploadSessionEvent.error:
+          if (!mounted) return;
+          _showErrorSnackBar('업로드 확인 중 오류가 발생했습니다.');
+      }
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      if (e.code == 'PRESIGNED_URL_EXPIRED') {
+        _showErrorSnackBar('업로드 URL이 만료되었습니다. 다시 시도해주세요.');
+      } else {
+        _showErrorSnackBar(e.message);
+      }
+    } on DioException {
+      if (!mounted) return;
+      if (_uploadCancelToken?.isCancelled != true) {
+        _showErrorSnackBar('네트워크 오류가 발생했습니다. 다시 시도해주세요.');
+      }
+    } finally {
+      _sseSubscription?.cancel();
+      _sseSubscription = null;
+      _uploadCancelToken = null;
+      if (mounted) {
+        setState(() {
+          _uploadPhase = _UploadPhase.idle;
+          _uploadProgress = 0.0;
+        });
+      }
+    }
+  }
+
+  /// POST /verifications 네트워크 실패 시 최대 3회 재시도
+  Future<void> _createVerificationWithRetry({
+    required VerificationService verificationService,
+    required String crewId,
+    String? challengeId,
+    required int uploadSessionId,
+    String? textContent,
+    required String idempotencyKey,
+  }) async {
+    for (var attempt = 1; attempt <= 3; attempt++) {
+      try {
+        await verificationService.createVerification(
+          challengeId: challengeId,
+          crewId: crewId,
+          uploadSessionId: uploadSessionId,
+          textContent: textContent,
+          idempotencyKey: idempotencyKey,
+        );
+        return;
+      } on ApiException catch (e) {
+        // 비즈니스 에러(4xx)는 즉시 throw
+        if (e.statusCode != null && e.statusCode! >= 400 && e.statusCode! < 500) {
+          rethrow;
+        }
+        // 네트워크성 실패만 재시도
+        if (attempt == 3) rethrow;
+        await Future.delayed(Duration(milliseconds: 500 * attempt));
+      }
+    }
+  }
+
+  void _invalidateProviders() {
+    ref.invalidate(feedProvider(widget.crewId));
+    ref.invalidate(myVerificationsProvider(widget.crewId));
+    ref.invalidate(crewDetailProvider(widget.crewId));
+  }
+
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.card,
+        content: Text(
+          '인증이 완료되었습니다!',
+          style: AppTextStyles.body1.copyWith(color: AppColors.white),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.pop();
+            },
+            child: Text('확인', style: TextStyle(color: AppColors.main)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.error,
+      ),
+    );
+  }
+
+  String _getMimeTypeFromFile(File file) {
+    final ext = file.path.split('.').last.toLowerCase();
+    switch (ext) {
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'webp':
+        return 'image/webp';
+      default:
+        return 'image/jpeg';
+    }
+  }
+
+  String get _buttonText {
+    switch (_uploadPhase) {
+      case _UploadPhase.idle:
+        return '인증 완료! ✅';
+      case _UploadPhase.creatingSession:
+        return '사진 업로드 준비 중...';
+      case _UploadPhase.uploadingS3:
+        return '사진 업로드 중...';
+      case _UploadPhase.waitingConfirm:
+        return '업로드 확인 중...';
+      case _UploadPhase.pollingFallback:
+        return '업로드 확인 중...';
+      case _UploadPhase.creatingVerification:
+        return '인증 등록 중...';
     }
   }
 
@@ -185,6 +429,10 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                       _buildPhotoArea(),
                       const SizedBox(height: AppSizes.paddingSM),
                       _buildPhotoButtons(),
+                      if (_uploadPhase == _UploadPhase.uploadingS3) ...[
+                        const SizedBox(height: AppSizes.paddingSM),
+                        _buildUploadProgress(),
+                      ],
                       const SizedBox(height: AppSizes.paddingLG),
                     ],
                     Text(
@@ -199,6 +447,7 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                       controller: _textController,
                       maxLines: 4,
                       maxLength: 200,
+                      enabled: !_isSubmitting,
                       style:
                           AppTextStyles.body1.copyWith(color: AppColors.white),
                       decoration: InputDecoration(
@@ -237,7 +486,7 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
               child: Column(
                 children: [
                   AppButton(
-                    text: '인증 완료! ✅',
+                    text: _buttonText,
                     isLoading: _isSubmitting,
                     onPressed: _handleSubmit,
                   ),
@@ -260,10 +509,10 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
       child: Row(
         children: [
           GestureDetector(
-            onTap: () => context.pop(),
-            child: const Icon(
+            onTap: _isSubmitting ? null : () => context.pop(),
+            child: Icon(
               Icons.arrow_back,
-              color: AppColors.white,
+              color: _isSubmitting ? AppColors.grey2 : AppColors.white,
               size: 28,
             ),
           ),
@@ -279,7 +528,7 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
 
   Widget _buildPhotoArea() {
     return GestureDetector(
-      onTap: () => _pickImage(ImageSource.gallery),
+      onTap: _isSubmitting ? null : () => _pickImage(ImageSource.gallery),
       child: Container(
         width: double.infinity,
         height: 240,
@@ -323,7 +572,8 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
           child: SizedBox(
             height: 52,
             child: OutlinedButton.icon(
-              onPressed: () => _pickImage(ImageSource.gallery),
+              onPressed:
+                  _isSubmitting ? null : () => _pickImage(ImageSource.gallery),
               icon: const Icon(Icons.photo_library, size: 18),
               label: const Text('갤러리'),
               style: OutlinedButton.styleFrom(
@@ -343,7 +593,8 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
           child: SizedBox(
             height: 52,
             child: OutlinedButton.icon(
-              onPressed: () => _pickImage(ImageSource.camera),
+              onPressed:
+                  _isSubmitting ? null : () => _pickImage(ImageSource.camera),
               icon: const Icon(Icons.camera_alt, size: 18),
               label: const Text('카메라'),
               style: OutlinedButton.styleFrom(
@@ -357,6 +608,28 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
               ),
             ),
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildUploadProgress() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: _uploadProgress,
+            backgroundColor: AppColors.grey1,
+            valueColor: const AlwaysStoppedAnimation<Color>(AppColors.main),
+            minHeight: 6,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '${(_uploadProgress * 100).toInt()}%',
+          style: AppTextStyles.caption.copyWith(color: AppColors.grey3),
         ),
       ],
     );

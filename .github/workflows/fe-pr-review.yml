@@ -3,12 +3,6 @@ name: FE PR Review
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    paths:
-      - 'lib/**'
-      - 'agents/**'
-      - 'CLAUDE.md'
-      - 'pubspec.yaml'
-      - 'pubspec.lock'
 
 permissions:
   contents: read
@@ -22,16 +16,17 @@ jobs:
     steps:
       - name: Checkout PR branch
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Collect changed files
+        run: |
+          git diff --name-only HEAD^ HEAD > changed_files.txt
 
       - name: Install GitHub CLI
         run: |
           sudo apt update
           sudo apt install gh -y
-
-      - name: Collect changed files
-        run: |
-          git fetch origin "${{ github.base_ref }}" --depth=1
-          git diff --name-only "origin/${{ github.base_ref }}"...HEAD > changed_files.txt
 
       - name: Create review comment
         run: |

@@ -141,7 +141,7 @@ class _CrewConfirmScreenState extends ConsumerState<CrewConfirmScreen> {
   Widget _buildContent(BuildContext context, CrewDetail crew) {
     final remaining = crew.endDate.difference(DateTime.now()).inDays;
 
-    return Column(
+    return Column(  
       children: [
         Expanded(
           child: SingleChildScrollView(

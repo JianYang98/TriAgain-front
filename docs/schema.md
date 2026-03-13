@@ -26,11 +26,13 @@ erDiagram
     users ||--o{ reactions : "남김"
 
     users {
-        string id PK
-        string email UK
+        string id PK "소셜 고유 ID — VARCHAR(64)"
+        string provider "KAKAO | APPLE"
+        string email "nullable"
         string nickname
         string profile_image_url
         timestamp created_at
+        timestamp terms_agreed_at "nullable — 약관 동의 일시 (NULL이면 기존 유저)"
     }
     
     crews {
@@ -46,6 +48,7 @@ erDiagram
         enum status
         date start_date
         date end_date
+        time deadline_time "DEFAULT 23:59:59"
         string invite_code UK
         timestamp created_at
     }
@@ -78,7 +81,7 @@ erDiagram
         string crew_id FK
         string upload_session_id FK "nullable, 사진 인증 시에만"
         string image_url
-        string text_content
+        varchar(500) text_content "최대 500자"
         enum status
         int report_count
         date target_date
@@ -127,7 +130,8 @@ erDiagram
     
     upload_session {
         bigint id PK
-        bigint user_id FK
+        varchar(36) user_id FK
+        varchar(36) crew_id FK "nullable"
         varchar image_key
         varchar content_type
         varchar status "PENDING / COMPLETED / EXPIRED"
@@ -175,6 +179,7 @@ erDiagram
 | IN_PROGRESS | 진행 중 |
 | SUCCESS | 3일 연속 성공 |
 | FAILED | 실패 (재시작 가능) |
+| ENDED | 크루 종료로 강제 종료 |
 
 ### verifications.status
 | 값 | 의미 |
@@ -256,6 +261,12 @@ ON verification(crew_id, created_at DESC);
 CREATE UNIQUE INDEX idx_verification_unique
 ON verification(user_id, crew_id, target_date);
 
+-- 동시 챌린지 생성 방지 (유저·크루당 IN_PROGRESS 1개만 허용)
+-- Flyway V6에서 추가
+CREATE UNIQUE INDEX uk_challenges_user_crew_in_progress
+ON challenges(user_id, crew_id)
+WHERE status = 'IN_PROGRESS';
+
 -- 신고 중복 방지
 CREATE UNIQUE INDEX idx_report_unique
 ON report(verification_id, reporter_id);
@@ -282,6 +293,10 @@ ON review(reviewer_id, created_at DESC);
 CREATE INDEX idx_report_status
 ON report(status, created_at DESC)
 WHERE status = 'PENDING';
+
+-- Lambda의 imageKey 기반 업로드 세션 조회 (Flyway V7)
+CREATE INDEX idx_upload_session_image_key
+ON upload_session (image_key);
 ```
 
 ## 5. 설계 트레이드오프: Verification의 3-way FK

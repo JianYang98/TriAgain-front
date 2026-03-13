@@ -74,9 +74,25 @@
 
 | 항목 | 내용 |
 |------|------|
-| 방식 | 카카오 소셜 로그인 |
-| 개발 순서 | 하드코딩 유저로 먼저 개발 → 마지막에 카카오 연동 |
-| 저장 정보 | 이메일, 닉네임, 프로필 이미지 (카카오에서 가져옴) |
+| 지원 방식 | 카카오 소셜 로그인 / Apple 로그인 (앱스토어 필수) |
+| 저장 정보 | 이메일(nullable), 닉네임, 프로필 이미지, provider(KAKAO/APPLE) |
+| 약관 동의 | 회원가입 시 약관 동의 필수 (`termsAgreed: true`), `terms_agreed_at` 저장 |
+| 닉네임 규칙 | 2~12자, 한글/영문/숫자/언더스코어(`_`)만 허용 |
+| 신규 유저 판단 | 로그인 응답의 `isNewUser: true`이면 닉네임 설정 화면으로 이동 |
+
+**카카오 플로우:**
+```
+POST /auth/kakao (kakaoAccessToken)
+→ isNewUser: true → 닉네임 입력 → POST /auth/signup
+→ isNewUser: false → 홈 화면
+```
+
+**Apple 플로우:**
+```
+POST /auth/apple (identityToken)
+→ isNewUser: true → 닉네임 입력 → POST /auth/apple-signup
+→ isNewUser: false → 홈 화면
+```
 
 > 상세 설계는 [docs/user.md](user.md) 참고
 
@@ -155,7 +171,12 @@
 
 - 사용자의 노력(인증)이 시스템 문제로 무효화되면 안 된다
 - S3 Direct Upload(Pre-signed URL) 방식으로 업로드 경로 단순화
-- 클라이언트에서 이미지 압축 (최대 해상도 1080px, 품질 60~75%, 목표 1MB 이하)
+- 클라이언트에서 이미지 압축 필수 (Phase 1 정책)
+  - maxWidth: 960px
+  - imageQuality: 70
+  - 목표 크기: 300KB ~ 700KB
+  - 최종 업로드 최대 크기: 1MB (클라이언트 기준)
+  - 서버 허용 최대 크기: 5MB (안전마진, MAX_FILE_SIZE)
 - 허용 확장자: jpg, jpeg, png, webp
 
 ### 3.2 피드 조회 응답 시간 300ms 이내 (Performance)

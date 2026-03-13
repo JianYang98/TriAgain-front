@@ -186,6 +186,7 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
 
       final session = await uploadService.createUploadSession(
         file: file,
+        crewId: widget.crewId,
         challengeId: challengeId,
       );
 

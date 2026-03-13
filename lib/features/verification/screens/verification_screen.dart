@@ -186,6 +186,7 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
 
       final session = await uploadService.createUploadSession(
         file: file,
+        crewId: widget.crewId,
         challengeId: challengeId,
       );
 
@@ -337,7 +338,7 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
     }
   }
 
-  void _invalidateProviders() {
+  void _invalidateProviders() {  
     ref.invalidate(feedProvider(widget.crewId));
     ref.invalidate(myVerificationsProvider(widget.crewId));
     ref.invalidate(crewDetailProvider(widget.crewId));

@@ -178,16 +178,10 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
       // 1. 업로드 세션 생성
       setState(() => _uploadPhase = _UploadPhase.creatingSession);
 
-      final challengeId = widget.challengeId;
-      if (challengeId == null) {
-        _showErrorSnackBar('챌린지 정보를 찾을 수 없습니다.');
-        return;
-      }
-
       final session = await uploadService.createUploadSession(
         file: file,
         crewId: widget.crewId,
-        challengeId: challengeId,
+        challengeId: widget.challengeId,
       );
 
       if (!mounted) return;

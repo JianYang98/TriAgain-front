@@ -7,6 +7,7 @@ import 'package:triagain/core/constants/app_text_styles.dart';
 import 'package:triagain/core/constants/app_sizes.dart';
 import 'package:triagain/core/network/api_exception.dart';
 import 'package:triagain/features/home/widgets/crew_card.dart';
+import 'package:triagain/models/crew.dart';
 import 'package:triagain/providers/crew_provider.dart';
 import 'package:triagain/services/crew_service.dart';
 import 'package:triagain/widgets/app_button.dart';
@@ -62,21 +63,50 @@ class HomeScreen extends ConsumerWidget {
                         ),
                       );
                     }
+                    final activeCrews = crews
+                        .where((c) => c.status != CrewStatus.completed)
+                        .toList();
+                    final completedCrews = crews
+                        .where((c) => c.status == CrewStatus.completed)
+                        .toList();
                     return RefreshIndicator(
                       color: AppColors.main,
-                      onRefresh: () =>
-                          ref.refresh(crewListProvider.future),
-                      child: ListView.separated(
-                        itemCount: crews.length,
-                        separatorBuilder: (_, _) =>
-                            const SizedBox(height: AppSizes.paddingMD),
-                        itemBuilder: (context, index) {
-                          return CrewCard(
-                            crew: crews[index],
-                            onTap: () =>
-                                context.push('/crew/${crews[index].id}'),
-                          );
-                        },
+                      onRefresh: () => ref.refresh(crewListProvider.future),
+                      child: CustomScrollView(
+                        slivers: [
+                          SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) => Padding(
+                                padding: const EdgeInsets.only(
+                                    bottom: AppSizes.paddingMD),
+                                child: CrewCard(
+                                  crew: activeCrews[index],
+                                  onTap: () => context
+                                      .push('/crew/${activeCrews[index].id}'),
+                                ),
+                              ),
+                              childCount: activeCrews.length,
+                            ),
+                          ),
+                          if (completedCrews.isNotEmpty)
+                            SliverToBoxAdapter(
+                                child: _buildCompletedHeader()),
+                          if (completedCrews.isNotEmpty)
+                            SliverList(
+                              delegate: SliverChildBuilderDelegate(
+                                (context, index) => Padding(
+                                  padding: const EdgeInsets.only(
+                                      bottom: AppSizes.paddingMD),
+                                  child: CrewCard(
+                                    crew: completedCrews[index],
+                                    onTap: () => context.push(
+                                        '/crew/${completedCrews[index].id}'),
+                                  ),
+                                ),
+                                childCount: completedCrews.length,
+                              ),
+                            ),
+                        ],
                       ),
                     );
                   },
@@ -137,6 +167,28 @@ class HomeScreen extends ConsumerWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildCompletedHeader() {
+    return Padding(
+      padding: const EdgeInsets.only(
+        top: AppSizes.paddingSM,
+        bottom: AppSizes.paddingMD,
+      ),
+      child: Row(
+        children: [
+          const Expanded(child: Divider(color: AppColors.grey1)),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSizes.paddingSM),
+            child: Text(
+              '종료된 크루',
+              style: AppTextStyles.caption.copyWith(color: AppColors.grey3),
+            ),
+          ),
+          const Expanded(child: Divider(color: AppColors.grey1)),
+        ],
       ),
     );
   }

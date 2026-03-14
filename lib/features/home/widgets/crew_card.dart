@@ -28,7 +28,9 @@ class CrewCard extends StatelessWidget {
                 child: Text(
                   crew.name,
                   style: AppTextStyles.heading3.copyWith(
-                    color: AppColors.white,
+                    color: crew.status == CrewStatus.completed
+                        ? AppColors.grey3
+                        : AppColors.white,
                   ),
                 ),
               ),

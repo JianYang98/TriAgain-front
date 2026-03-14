@@ -9,13 +9,19 @@ import 'package:triagain/core/constants/app_text_styles.dart';
 class CrewSuccessScreen extends StatelessWidget {
   final String inviteCode;
   final String startDate;
+  final String endDate;
   final String crewName;
+  final String goal;
+  final String verificationContent;
 
   const CrewSuccessScreen({
     super.key,
     required this.inviteCode,
     required this.startDate,
+    required this.endDate,
     required this.crewName,
+    required this.goal,
+    required this.verificationContent,
   });
 
   @override
@@ -161,7 +167,12 @@ class CrewSuccessScreen extends StatelessWidget {
   }
 
   void _shareInviteMessage(BuildContext context) {
-    final message = '🔥 TriAgain 크루에 초대합니다!\n크루: $crewName\n초대코드: $inviteCode';
+    final message = '[작심삼일 크루 초대]\n'
+        '크루명: $crewName\n'
+        '목표: $goal\n'
+        '인증 내용: $verificationContent\n'
+        '기간: $startDate ~ $endDate\n'
+        '초대코드: $inviteCode';
     SharePlus.instance.share(ShareParams(text: message));
   }
 }

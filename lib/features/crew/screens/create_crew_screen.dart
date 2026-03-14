@@ -24,10 +24,13 @@ class _CreateCrewScreenState extends ConsumerState<CreateCrewScreen> {
 
   final _nameController = TextEditingController();
   final _goalController = TextEditingController();
+  final _verificationContentController = TextEditingController();
   final _nameFocus = FocusNode();
   final _goalFocus = FocusNode();
+  final _verificationContentFocus = FocusNode();
   final _nameKey = GlobalKey();
   final _goalKey = GlobalKey();
+  final _verificationContentKey = GlobalKey();
   final _endDateKey = GlobalKey();
   int _maxMembers = 5;
   late DateTime _startDate;
@@ -57,8 +60,10 @@ class _CreateCrewScreenState extends ConsumerState<CreateCrewScreen> {
   void dispose() {
     _nameController.dispose();
     _goalController.dispose();
+    _verificationContentController.dispose();
     _nameFocus.dispose();
     _goalFocus.dispose();
+    _verificationContentFocus.dispose();
     super.dispose();
   }
 
@@ -77,6 +82,7 @@ class _CreateCrewScreenState extends ConsumerState<CreateCrewScreen> {
   Future<void> _handleCreate() async {
     final name = _nameController.text.trim();
     final goal = _goalController.text.trim();
+    final verificationContent = _verificationContentController.text.trim();
 
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -90,6 +96,13 @@ class _CreateCrewScreenState extends ConsumerState<CreateCrewScreen> {
         const SnackBar(content: Text('목표를 입력해주세요')),
       );
       _scrollToAndFocus(_goalKey, _goalFocus);
+      return;
+    }
+    if (verificationContent.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('인증 내용을 입력해주세요.')),
+      );
+      _scrollToAndFocus(_verificationContentKey, _verificationContentFocus);
       return;
     }
     if (_endDate == null) {
@@ -119,6 +132,7 @@ class _CreateCrewScreenState extends ConsumerState<CreateCrewScreen> {
       final result = await crewService.createCrew(
         name: name,
         goal: goal,
+        verificationContent: verificationContent,
         verificationType: _verificationType,
         maxMembers: _maxMembers,
         startDate: _startDate,
@@ -131,10 +145,12 @@ class _CreateCrewScreenState extends ConsumerState<CreateCrewScreen> {
 
       if (!mounted) return;
 
-      final dateStr =
+      final startDateStr =
           '${result.startDate.year}.${result.startDate.month.toString().padLeft(2, '0')}.${result.startDate.day.toString().padLeft(2, '0')}';
+      final endDateStr =
+          '${_endDate!.year}.${_endDate!.month.toString().padLeft(2, '0')}.${_endDate!.day.toString().padLeft(2, '0')}';
       context.go(
-          '/crew/success?inviteCode=${result.inviteCode}&startDate=$dateStr&crewName=${Uri.encodeComponent(name)}');
+          '/crew/success?inviteCode=${result.inviteCode}&startDate=$startDateStr&endDate=$endDateStr&crewName=${Uri.encodeComponent(name)}&goal=${Uri.encodeComponent(goal)}&verificationContent=${Uri.encodeComponent(verificationContent)}');
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -221,6 +237,29 @@ class _CreateCrewScreenState extends ConsumerState<CreateCrewScreen> {
                             .copyWith(color: AppColors.white),
                         decoration: InputDecoration(
                           hintText: '목표를 입력하세요',
+                          hintStyle: AppTextStyles.body1
+                              .copyWith(color: AppColors.grey3),
+                          counterStyle: AppTextStyles.caption
+                              .copyWith(color: AppColors.grey3),
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSizes.paddingSM),
+
+                    _buildSection(
+                      key: _verificationContentKey,
+                      label: '인증 내용',
+                      child: TextField(
+                        controller: _verificationContentController,
+                        focusNode: _verificationContentFocus,
+                        maxLength: 50,
+                        style: AppTextStyles.body1
+                            .copyWith(color: AppColors.white),
+                        decoration: InputDecoration(
+                          hintText: '예: 운동 완료 인증샷 찍기',
                           hintStyle: AppTextStyles.body1
                               .copyWith(color: AppColors.grey3),
                           counterStyle: AppTextStyles.caption

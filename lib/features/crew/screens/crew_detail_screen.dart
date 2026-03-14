@@ -170,6 +170,15 @@ class _CrewDetailScreenState extends ConsumerState<CrewDetailScreen> {
                           color: AppColors.white.withValues(alpha: 0.8),
                         ),
                       ),
+                      if (crew.verificationContent != null) ...[
+                        const SizedBox(height: AppSizes.paddingXS),
+                        Text(
+                          '인증 내용  ${crew.verificationContent!}',
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.white.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),

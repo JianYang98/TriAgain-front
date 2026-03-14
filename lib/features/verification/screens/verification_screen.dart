@@ -387,7 +387,7 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
   String get _buttonText {
     switch (_uploadPhase) {
       case _UploadPhase.idle:
-        return '인증 완료! ✅';
+        return '인증 완료!';
       case _UploadPhase.creatingSession:
         return '사진 업로드 준비 중...';
       case _UploadPhase.uploadingS3:
@@ -403,6 +403,11 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final crewAsync = ref.watch(crewDetailProvider(widget.crewId));
+    final verificationContent = crewAsync.whenOrNull(
+      data: (crew) => crew.verificationContent,
+    );
+
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -414,6 +419,30 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (verificationContent != null) ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(AppSizes.paddingMD),
+                        decoration: BoxDecoration(
+                          color: AppColors.card,
+                          borderRadius: BorderRadius.circular(AppSizes.buttonRadius),
+                          border: Border.all(color: AppColors.grey1),
+                        ),
+                        child: Row(
+                          children: [
+                            Text('📋  ', style: AppTextStyles.body2),
+                            Expanded(
+                              child: Text(
+                                verificationContent,
+                                style: AppTextStyles.body2
+                                    .copyWith(color: AppColors.grey4),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: AppSizes.paddingMD),
+                    ],
                     if (_isPhotoRequired) ...[
                       Text(
                         '📸 사진 인증',
@@ -430,14 +459,6 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                       ],
                       const SizedBox(height: AppSizes.paddingLG),
                     ],
-                    Text(
-                      _isPhotoRequired
-                          ? '✍️ 오늘의 한마디 (선택)'
-                          : '✍️ 오늘의 인증',
-                      style: AppTextStyles.heading3
-                          .copyWith(color: AppColors.white),
-                    ),
-                    const SizedBox(height: AppSizes.paddingSM),
                     TextField(
                       controller: _textController,
                       maxLines: 4,

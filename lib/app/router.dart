@@ -45,7 +45,10 @@ GoRouter createRouter({String initialLocation = '/login'}) {
         builder: (context, state) => CrewSuccessScreen(
           inviteCode: state.uri.queryParameters['inviteCode'] ?? '',
           startDate: state.uri.queryParameters['startDate'] ?? '',
+          endDate: state.uri.queryParameters['endDate'] ?? '',
           crewName: state.uri.queryParameters['crewName'] ?? '',
+          goal: state.uri.queryParameters['goal'] ?? '',
+          verificationContent: state.uri.queryParameters['verificationContent'] ?? '',
         ),
       ),
       GoRoute(

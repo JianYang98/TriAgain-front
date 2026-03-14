@@ -32,6 +32,7 @@ class CrewService {
   Future<CreateCrewResult> createCrew({
     required String name,
     required String goal,
+    required String verificationContent,
     required VerificationType verificationType,
     required int maxMembers,
     required DateTime startDate,
@@ -44,6 +45,7 @@ class CrewService {
       data: {
         'name': name,
         'goal': goal,
+        'verificationContent': verificationContent,
         'verificationType': verificationType.toJson(),
         'maxMembers': maxMembers,
         'startDate': _formatDate(startDate),

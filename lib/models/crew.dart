@@ -159,6 +159,7 @@ class CrewDetail {
   final String? deadlineTime;
   final bool? joinable;
   final String? joinBlockedReason;
+  final String? verificationContent;
 
   const CrewDetail({
     required this.id,
@@ -178,6 +179,7 @@ class CrewDetail {
     this.deadlineTime,
     this.joinable,
     this.joinBlockedReason,
+    this.verificationContent,
   });
 
   factory CrewDetail.fromJson(Map<String, dynamic> json) {
@@ -204,6 +206,7 @@ class CrewDetail {
       deadlineTime: json['deadlineTime'] as String?,
       joinable: json['joinable'] as bool?,
       joinBlockedReason: json['joinBlockedReason'] as String?,
+      verificationContent: json['verificationContent'] as String?,
     );
   }
 }

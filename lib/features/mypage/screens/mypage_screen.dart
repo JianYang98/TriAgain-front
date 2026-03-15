@@ -1,6 +1,4 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:triagain/core/constants/app_colors.dart';
@@ -161,44 +159,15 @@ class _MyPageScreenState extends ConsumerState<MyPageScreen> {
     return Row(
       children: [
         // 프로필 이미지
-        ClipOval(
-          child: _user?.profileImageUrl != null
-              ? CachedNetworkImage(
-                  imageUrl: _user!.profileImageUrl!,
-                  width: 64,
-                  height: 64,
-                  fit: BoxFit.cover,
-                  placeholder: (_, _) => Container(
-                    width: 64,
-                    height: 64,
-                    color: AppColors.card,
-                    child: const Icon(
-                      Icons.person,
-                      color: AppColors.grey3,
-                      size: 32,
-                    ),
-                  ),
-                  errorWidget: (_, _, _) => Container(
-                    width: 64,
-                    height: 64,
-                    color: AppColors.card,
-                    child: const Icon(
-                      Icons.person,
-                      color: AppColors.grey3,
-                      size: 32,
-                    ),
-                  ),
-                )
-              : Container(
-                  width: 64,
-                  height: 64,
-                  color: AppColors.card,
-                  child: const Icon(
-                    Icons.person,
-                    color: AppColors.grey3,
-                    size: 32,
-                  ),
-                ),
+        CircleAvatar(
+          radius: 32,
+          backgroundColor: AppColors.card,
+          backgroundImage: _user?.profileImageUrl != null
+              ? NetworkImage(_user!.profileImageUrl!)
+              : null,
+          child: _user?.profileImageUrl == null
+              ? const Icon(Icons.person, color: AppColors.grey3, size: 32)
+              : null,
         ),
         const SizedBox(width: AppSizes.paddingMD),
         Text(
@@ -296,10 +265,6 @@ class _MyPageScreenState extends ConsumerState<MyPageScreen> {
                 controller: controller,
                 autofocus: true,
                 maxLength: 12,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(
-                      RegExp(r'[가-힣a-zA-Z0-9_]')),
-                ],
                 style: AppTextStyles.body1.copyWith(color: AppColors.white),
                 decoration: InputDecoration(
                   hintText: '새 닉네임 입력 (2~12자)',

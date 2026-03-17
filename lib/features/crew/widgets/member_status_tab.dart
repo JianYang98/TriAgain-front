@@ -85,7 +85,8 @@ class MemberStatusTab extends ConsumerWidget {
     final successCount = member.successCount;
     final completed = progress?.completedDays ?? 0;
     final target = progress?.targetDays ?? 3;
-    final isSuccess = progress?.challengeStatus == 'SUCCESS';
+    final isSuccess = progress?.challengeStatus == 'SUCCESS' ||
+        (progress == null && successCount > 0);
 
     // 크루 상태별 텍스트 분기
     final String attemptText;
@@ -238,7 +239,11 @@ class MemberStatusTab extends ConsumerWidget {
   }
 
   Widget _buildProgressBar(int completed, int target, bool isSuccess) {
-    final fraction = target > 0 ? (completed / target).clamp(0.0, 1.0) : 0.0;
+    final fraction = isSuccess
+        ? 1.0
+        : target > 0
+            ? (completed / target).clamp(0.0, 1.0)
+            : 0.0;
 
     return SizedBox(
       height: 28,
@@ -269,23 +274,10 @@ class MemberStatusTab extends ConsumerWidget {
             bottom: 0,
             child: Center(
               child: isSuccess
-                  ? Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Done',
-                          style: AppTextStyles.body2.copyWith(
-                            color: AppColors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(width: 3),
-                        const Icon(
-                          Icons.check_circle,
-                          color: AppColors.white,
-                          size: 14,
-                        ),
-                      ],
+                  ? const Icon(
+                      Icons.check_circle,
+                      color: AppColors.white,
+                      size: 16,
                     )
                   : Text(
                       '$completed/$target',

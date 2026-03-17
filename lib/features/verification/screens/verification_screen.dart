@@ -344,14 +344,14 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.card,
         content: Text(
-          '인증이 완료되었습니다!',
+          '오늘도 작심! 인증완료 \u{1F4AA}',
           style: AppTextStyles.body1.copyWith(color: AppColors.white),
         ),
         actions: [
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              context.pop();
+              context.pop(true);
             },
             child: Text('확인', style: TextStyle(color: AppColors.main)),
           ),
@@ -387,7 +387,7 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
   String get _buttonText {
     switch (_uploadPhase) {
       case _UploadPhase.idle:
-        return '인증 완료!';
+        return '오늘도 작심! 인증하기 \u{1F4AA}';
       case _UploadPhase.creatingSession:
         return '사진 업로드 준비 중...';
       case _UploadPhase.uploadingS3:
@@ -534,7 +534,7 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
           ),
           const SizedBox(width: 12),
           Text(
-            '오늘 인증하기',
+            '오늘의 작심 채우기',
             style: AppTextStyles.heading1.copyWith(color: AppColors.white),
           ),
         ],

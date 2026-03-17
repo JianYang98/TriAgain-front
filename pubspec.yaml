@@ -1,7 +1,7 @@
 name: triagain
 description: "TriAgain - Start Small. Try Again."
 publish_to: 'none'
-version: 0.1.0+1
+version: 0.1.0+4
 
 environment:
   sdk: ^3.11.0
@@ -21,6 +21,7 @@ dependencies:
   kakao_flutter_sdk: ^1.9.6
   sign_in_with_apple: ^6.1.0
   flutter_secure_storage: ^9.2.4
+  confetti: ^0.8.0
 
 dev_dependencies:
   flutter_test:

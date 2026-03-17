@@ -77,13 +77,12 @@ class CrewService {
     return response.data!;
   }
 
-  Future<CrewDetail> editCrew(String crewId, Map<String, dynamic> changes) async {
-    final response = await _apiClient.patch<CrewDetail>(
+  Future<void> editCrew(String crewId, Map<String, dynamic> changes) async {
+    await _apiClient.patch<Map<String, dynamic>>(
       '/crews/$crewId',
       data: changes,
-      fromData: (json) => CrewDetail.fromJson(json as Map<String, dynamic>),
+      fromData: (json) => json as Map<String, dynamic>,
     );
-    return response.data!;
   }
 
   Future<void> deleteCrew(String crewId) async {

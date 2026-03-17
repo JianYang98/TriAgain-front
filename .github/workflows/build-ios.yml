@@ -81,6 +81,7 @@ jobs:
 
           cd ios
           fastlane match appstore \
+            --git_basic_authorization "$MATCH_GIT_BASIC_AUTHORIZATION" \
             --keychain_name "fastlane_keychain" \
             --keychain_password "fastlane_password" \
             --readonly true

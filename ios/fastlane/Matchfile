@@ -1,0 +1,9 @@
+git_url("https://github.com/JianYang98/triagain-match-certificates.git")
+
+storage_mode("git")
+
+type("appstore")
+
+app_identifier("com.triagain.triagain")
+
+team_id("9R9BF2BQSS")

@@ -1,0 +1,107 @@
+name: Build iOS
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  bump-build-number:
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    outputs:
+      new_build_number: ${{ steps.bump.outputs.new_build_number }}
+      new_version: ${{ steps.bump.outputs.new_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Bump build number in pubspec.yaml
+        id: bump
+        run: |
+          CURRENT=$(grep '^version:' pubspec.yaml | sed 's/version: //')
+          VERSION_NAME=$(echo "$CURRENT" | cut -d'+' -f1)
+          BUILD_NUMBER=$(echo "$CURRENT" | cut -d'+' -f2)
+          NEW_BUILD=$((BUILD_NUMBER + 1))
+          NEW_VERSION="${VERSION_NAME}+${NEW_BUILD}"
+
+          sed -i "s/^version: .*/version: ${NEW_VERSION}/" pubspec.yaml
+
+          echo "new_build_number=${NEW_BUILD}" >> "$GITHUB_OUTPUT"
+          echo "new_version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Commit and push build number
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pubspec.yaml
+          git commit -m "chore: bump build number to ${{ steps.bump.outputs.new_version }} [skip ci]"
+          git push
+
+  build:
+    needs: bump-build-number
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.2'
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+
+      - name: Install Fastlane
+        run: gem install fastlane
+
+      - name: Install certificates via Match
+        env:
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+          MATCH_KEYCHAIN_NAME: fastlane_keychain
+          MATCH_KEYCHAIN_PASSWORD: fastlane_password
+        run: |
+          security create-keychain -p "fastlane_password" fastlane_keychain
+          security set-keychain-settings -lut 21600 fastlane_keychain
+          security unlock-keychain -p "fastlane_password" fastlane_keychain
+          security list-keychain -d user -s fastlane_keychain
+
+          cd ios
+          fastlane match appstore \
+            --keychain_name "fastlane_keychain" \
+            --keychain_password "fastlane_password" \
+            --readonly true
+
+      - name: Install CocoaPods
+        run: cd ios && pod install --repo-update
+
+      - name: Build IPA
+        run: |
+          flutter build ipa --release \
+            --dart-define=KAKAO_NATIVE_KEY=${{ secrets.KAKAO_NATIVE_KEY }} \
+            --dart-define=BASE_URL=${{ secrets.BASE_URL }} \
+            --export-options-plist=ios/ExportOptions.plist
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: triagain-ipa-${{ needs.bump-build-number.outputs.new_version }}
+          path: build/ios/ipa/*.ipa
+          retention-days: 30
+
+      - name: Clean up keychain
+        if: always()
+        run: security delete-keychain fastlane_keychain || true

@@ -209,36 +209,35 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                       AppTextStyles.body1.copyWith(color: AppColors.grey3),
                   counterStyle:
                       AppTextStyles.caption.copyWith(color: AppColors.grey3),
-                  errorText: _nicknameError,
-                  errorStyle:
-                      AppTextStyles.caption.copyWith(color: AppColors.error),
                   filled: true,
                   fillColor: AppColors.card,
                   enabledBorder: OutlineInputBorder(
                     borderRadius:
                         BorderRadius.circular(AppSizes.buttonRadius),
-                    borderSide: const BorderSide(color: AppColors.grey1),
+                    borderSide: BorderSide(
+                      color: _nicknameError != null
+                          ? AppColors.error
+                          : AppColors.grey1,
+                    ),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius:
                         BorderRadius.circular(AppSizes.buttonRadius),
-                    borderSide: const BorderSide(color: AppColors.main),
-                  ),
-                  errorBorder: OutlineInputBorder(
-                    borderRadius:
-                        BorderRadius.circular(AppSizes.buttonRadius),
-                    borderSide: const BorderSide(color: AppColors.error),
-                  ),
-                  focusedErrorBorder: OutlineInputBorder(
-                    borderRadius:
-                        BorderRadius.circular(AppSizes.buttonRadius),
-                    borderSide: const BorderSide(color: AppColors.error),
+                    borderSide: BorderSide(
+                      color: _nicknameError != null
+                          ? AppColors.error
+                          : AppColors.main,
+                    ),
                   ),
                 ),
               ),
               Text(
-                '한글, 영문, 숫자, 밑줄(_)만 사용 가능',
-                style: AppTextStyles.caption.copyWith(color: AppColors.grey3),
+                _nicknameError ?? '한글, 영문, 숫자, 밑줄(_)만 사용 가능',
+                style: AppTextStyles.caption.copyWith(
+                  color: _nicknameError != null
+                      ? AppColors.error
+                      : AppColors.grey3,
+                ),
               ),
 
               const Spacer(),

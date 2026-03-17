@@ -45,3 +45,7 @@ app.*.map.json
 # 환경별 실행/빌드 스크립트 (API 키/서버 IP 포함)
 *_run.sh
 *_build.sh
+
+# Fastlane
+ios/fastlane/report.xml
+ios/fastlane/Preview.html

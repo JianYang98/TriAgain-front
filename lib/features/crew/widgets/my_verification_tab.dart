@@ -1,3 +1,4 @@
+import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,7 +14,7 @@ import 'package:triagain/providers/verification_provider.dart';
 import 'package:triagain/widgets/app_button.dart';
 import 'package:triagain/widgets/app_card.dart';
 
-class MyVerificationTab extends ConsumerWidget {
+class MyVerificationTab extends ConsumerStatefulWidget {
   final String crewId;
 
   const MyVerificationTab({
@@ -22,7 +23,30 @@ class MyVerificationTab extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MyVerificationTab> createState() => _MyVerificationTabState();
+}
+
+class _MyVerificationTabState extends ConsumerState<MyVerificationTab> {
+  late final ConfettiController _confettiController;
+  bool _justVerified = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _confettiController =
+        ConfettiController(duration: const Duration(seconds: 2));
+  }
+
+  @override
+  void dispose() {
+    _confettiController.dispose();
+    super.dispose();
+  }
+
+  String get crewId => widget.crewId;
+
+  @override
+  Widget build(BuildContext context) {
     final crewAsync = ref.watch(crewDetailProvider(crewId));
 
     final crew = crewAsync.valueOrNull;
@@ -32,11 +56,37 @@ class MyVerificationTab extends ConsumerWidget {
       );
     }
 
-    return switch (crew.status) {
+    final content = switch (crew.status) {
       CrewStatus.recruiting => _buildRecruitingUI(crew),
-      CrewStatus.active => _buildActiveUI(context, ref, crew),
-      CrewStatus.completed => _buildCompletedUI(context, ref, crew),
+      CrewStatus.active => _buildActiveUI(context, crew),
+      CrewStatus.completed => _buildCompletedUI(context, crew),
     };
+
+    return Stack(
+      children: [
+        content,
+        Align(
+          alignment: Alignment.topCenter,
+          child: ConfettiWidget(
+            confettiController: _confettiController,
+            blastDirectionality: BlastDirectionality.explosive,
+            blastDirection: -3.14159 / 2,
+            gravity: 0.2,
+            emissionFrequency: 0.05,
+            numberOfParticles: 20,
+            shouldLoop: false,
+            colors: const [
+              AppColors.main,
+              AppColors.mainLight,
+              AppColors.mainDark,
+              AppColors.success,
+              AppColors.warning,
+              Colors.white,
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildRecruitingUI(CrewDetail crew) {
@@ -61,8 +111,7 @@ class MyVerificationTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildActiveUI(
-      BuildContext context, WidgetRef ref, CrewDetail crew) {
+  Widget _buildActiveUI(BuildContext context, CrewDetail crew) {
     final myVerAsync = ref.watch(myVerificationsProvider(crewId));
 
     return myVerAsync.when(
@@ -71,6 +120,17 @@ class MyVerificationTab extends ConsumerWidget {
         final verifiedDates = myVer.verifiedDatesSet;
         final userId = ref.watch(authUserIdProvider);
         final joinedAt = _findJoinedAt(crew, userId);
+
+        // 방금 인증 완료 + 작심삼일 달성 → 컨페티 재생
+        final justCompleted = _justVerified &&
+            ((progress != null && progress.status == 'SUCCESS') ||
+                (progress == null && myVer.completedChallenges > 0));
+        if (justCompleted) {
+          _justVerified = false;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _confettiController.play();
+          });
+        }
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(AppSizes.paddingMD),
@@ -83,13 +143,13 @@ class MyVerificationTab extends ConsumerWidget {
                 joinedAt: joinedAt,
               ),
               const SizedBox(height: AppSizes.paddingSM),
-              _buildStreakSummary(myVer, progress),
+              _buildStreakSummary(myVer, progress, verifiedDates),
               const SizedBox(height: AppSizes.paddingMD),
               if (progress != null)
-                _buildChallengeProgressCard(
-                    context, progress, verifiedDates, crew)
+                _buildChallengeProgressCard(context, progress, verifiedDates, crew)
               else
-                _buildEmptyChallengeCard(context, verifiedDates, crew),
+                _buildEmptyChallengeCard(
+                    context, verifiedDates, crew, myVer.completedChallenges),
             ],
           ),
         );
@@ -97,12 +157,11 @@ class MyVerificationTab extends ConsumerWidget {
       loading: () => const Center(
         child: CircularProgressIndicator(color: AppColors.main),
       ),
-      error: (error, _) => _buildErrorUI(ref),
+      error: (error, _) => _buildErrorUI(),
     );
   }
 
-  Widget _buildCompletedUI(
-      BuildContext context, WidgetRef ref, CrewDetail crew) {
+  Widget _buildCompletedUI(BuildContext context, CrewDetail crew) {
     final myVerAsync = ref.watch(myVerificationsProvider(crewId));
 
     return myVerAsync.when(
@@ -123,7 +182,7 @@ class MyVerificationTab extends ConsumerWidget {
                 joinedAt: joinedAt,
               ),
               const SizedBox(height: AppSizes.paddingSM),
-              _buildStreakSummary(myVer, progress),
+              _buildStreakSummary(myVer, progress, verifiedDates),
               const SizedBox(height: AppSizes.paddingMD),
               AppCard(
                 child: Padding(
@@ -142,11 +201,11 @@ class MyVerificationTab extends ConsumerWidget {
       loading: () => const Center(
         child: CircularProgressIndicator(color: AppColors.main),
       ),
-      error: (error, _) => _buildErrorUI(ref),
+      error: (error, _) => _buildErrorUI(),
     );
   }
 
-  Widget _buildErrorUI(WidgetRef ref) {
+  Widget _buildErrorUI() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -190,10 +249,18 @@ class MyVerificationTab extends ConsumerWidget {
   Widget _buildStreakSummary(
     MyVerificationsResult myVer,
     MyProgress? progress,
+    Set<DateTime> verifiedDates,
   ) {
     final completedChallenges = myVer.completedChallenges;
     final completedDays = progress?.completedDays ?? 0;
     final targetDays = progress?.targetDays ?? 3;
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final isTodayVerified = verifiedDates.contains(today);
+
+    final isAchieved = progress?.status == 'SUCCESS' ||
+        (progress == null && completedChallenges > 0 && isTodayVerified);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSizes.paddingXS),
@@ -209,8 +276,12 @@ class MyVerificationTab extends ConsumerWidget {
           ),
           const Spacer(),
           Text(
-            '현재: Day $completedDays/$targetDays',
-            style: AppTextStyles.body2.copyWith(color: AppColors.grey3),
+            isAchieved
+                ? '현재: 달성 완료!'
+                : '현재: Day $completedDays/$targetDays',
+            style: AppTextStyles.body2.copyWith(
+              color: isAchieved ? AppColors.main : AppColors.grey3,
+            ),
           ),
         ],
       ),
@@ -231,6 +302,29 @@ class MyVerificationTab extends ConsumerWidget {
     return now.isAfter(deadline);
   }
 
+  String _getProgressMessage(String status, int completedDays) {
+    if (status == 'SUCCESS') {
+      return '\u{1F525} 작심삼일 달성! 대단해요!\u{1F525}';
+    } else if (completedDays > 0) {
+      return '작심삼일을 향해 달려가는 중! \u{1F3C3}';
+    } else {
+      return '작심삼일을 채워주세요!';
+    }
+  }
+
+  Future<void> _navigateToVerification(
+      BuildContext context, String? challengeId) async {
+    final query = challengeId != null
+        ? '/verification?crewId=$crewId&challengeId=$challengeId'
+        : '/verification?crewId=$crewId';
+    final result = await context.push<bool>(query);
+    if (result == true && mounted) {
+      setState(() {
+        _justVerified = true;
+      });
+    }
+  }
+
   Widget _buildChallengeProgressCard(
     BuildContext context,
     MyProgress progress,
@@ -240,7 +334,7 @@ class MyVerificationTab extends ConsumerWidget {
     final completedDays = progress.completedDays;
     final targetDays = progress.targetDays;
     final challengeId = progress.challengeId;
-    final isCompleted = completedDays >= targetDays;
+    final isCompleted = progress.status == 'SUCCESS';
 
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -254,7 +348,7 @@ class MyVerificationTab extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(targetDays, (index) {
-              final isDone = index < completedDays;
+              final isDone = isCompleted || index < completedDays;
               return Padding(
                 padding: EdgeInsets.only(
                   right: index < targetDays - 1 ? AppSizes.paddingLG : 0,
@@ -283,11 +377,9 @@ class MyVerificationTab extends ConsumerWidget {
           ),
           const SizedBox(height: AppSizes.paddingSM),
           Text(
-            isCompleted
-                ? '작심삼일 달성!'
-                : '$completedDays/$targetDays일 완료',
+            _getProgressMessage(progress.status, completedDays),
             style: AppTextStyles.body2.copyWith(
-              color: isCompleted ? AppColors.success : AppColors.grey3,
+              color: isCompleted ? AppColors.main : AppColors.grey3,
               fontWeight: isCompleted ? FontWeight.w600 : null,
             ),
           ),
@@ -295,7 +387,7 @@ class MyVerificationTab extends ConsumerWidget {
           if (!isCompleted)
             if (isTodayVerified)
               Text(
-                '오늘 인증 완료!',
+                '오늘도 작심! 인증완료 \u{1F4AA}',
                 style: AppTextStyles.body1.copyWith(
                   color: AppColors.success,
                   fontWeight: FontWeight.w600,
@@ -308,9 +400,9 @@ class MyVerificationTab extends ConsumerWidget {
               )
             else
               AppButton(
-                text: '오늘 인증하기',
-                onPressed: () => context.push(
-                    '/verification?crewId=$crewId&challengeId=$challengeId'),
+                text: '오늘의 작심 채우기',
+                onPressed: () =>
+                    _navigateToVerification(context, challengeId),
               ),
           const SizedBox(height: AppSizes.paddingXS),
         ],
@@ -322,11 +414,13 @@ class MyVerificationTab extends ConsumerWidget {
     BuildContext context,
     Set<DateTime> verifiedDates,
     CrewDetail crew,
+    int completedChallenges,
   ) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final isTodayVerified = verifiedDates.contains(today);
     final isDeadlinePassed = _isDeadlinePassed(crew, now);
+    final hasCompletedBefore = completedChallenges > 0;
 
     return AppCard(
       child: Column(
@@ -344,16 +438,21 @@ class MyVerificationTab extends ConsumerWidget {
                     Container(
                       width: 20,
                       height: 20,
-                      decoration: const BoxDecoration(
-                        color: AppColors.grey2,
+                      decoration: BoxDecoration(
+                        color: hasCompletedBefore && isTodayVerified
+                            ? AppColors.main
+                            : AppColors.grey2,
                         shape: BoxShape.circle,
                       ),
                     ),
                     const SizedBox(height: AppSizes.paddingXS),
                     Text(
                       'Day ${index + 1}',
-                      style: AppTextStyles.caption
-                          .copyWith(color: AppColors.grey3),
+                      style: AppTextStyles.caption.copyWith(
+                        color: hasCompletedBefore && isTodayVerified
+                            ? AppColors.white
+                            : AppColors.grey3,
+                      ),
                     ),
                   ],
                 ),
@@ -362,13 +461,23 @@ class MyVerificationTab extends ConsumerWidget {
           ),
           const SizedBox(height: AppSizes.paddingSM),
           Text(
-            '작심삼일을 채워주세요!',
-            style: AppTextStyles.body2.copyWith(color: AppColors.grey3),
+            hasCompletedBefore && isTodayVerified
+                ? '\u{1F525} 작심삼일 달성! 대단해요!\u{1F525}'
+                : '작심삼일을 채워주세요!',
+            style: AppTextStyles.body2.copyWith(
+              color: hasCompletedBefore && isTodayVerified
+                  ? AppColors.main
+                  : AppColors.grey3,
+              fontWeight:
+                  hasCompletedBefore && isTodayVerified ? FontWeight.w600 : null,
+            ),
           ),
           const SizedBox(height: AppSizes.paddingMD),
-          if (isTodayVerified)
+          if (hasCompletedBefore && isTodayVerified)
+            const SizedBox.shrink()
+          else if (isTodayVerified)
             Text(
-              '오늘 인증 완료!',
+              '오늘도 작심! 인증완료 \u{1F4AA}',
               style: AppTextStyles.body1.copyWith(
                 color: AppColors.success,
                 fontWeight: FontWeight.w600,
@@ -381,9 +490,8 @@ class MyVerificationTab extends ConsumerWidget {
             )
           else
             AppButton(
-              text: '오늘 인증하기',
-              onPressed: () =>
-                  context.push('/verification?crewId=$crewId'),
+              text: '오늘의 작심 채우기',
+              onPressed: () => _navigateToVerification(context, null),
             ),
           const SizedBox(height: AppSizes.paddingXS),
         ],

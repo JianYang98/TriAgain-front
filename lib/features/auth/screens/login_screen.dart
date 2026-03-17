@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -58,26 +56,19 @@ class LoginScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              // Apple 로그인 버튼 (iOS만)
-              if (Platform.isIOS) ...[
-                const SizedBox(height: AppSizes.paddingSM),
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: SignInWithAppleButton(
-                    text: 'Apple로 로그인',
-                    style: SignInWithAppleButtonStyle.white,
-                    // TODO: Apple Developer 승인 후 _loginWithApple(context, ref) 로 복원
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Apple 로그인은 준비중입니다.'),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
+              // TODO: Apple Developer 승인 완료 후 아래 블록 주석 해제
+              // if (Platform.isIOS) ...[
+              //   const SizedBox(height: AppSizes.paddingSM),
+              //   SizedBox(
+              //     width: double.infinity,
+              //     height: 52,
+              //     child: SignInWithAppleButton(
+              //       text: 'Apple로 로그인',
+              //       style: SignInWithAppleButtonStyle.white,
+              //       onPressed: () => _loginWithApple(context, ref),
+              //     ),
+              //   ),
+              // ],
               if (kDebugMode) ...[
                 const SizedBox(height: AppSizes.paddingSM),
                 _buildTestUserButton(

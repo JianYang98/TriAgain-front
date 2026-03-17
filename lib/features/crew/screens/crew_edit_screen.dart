@@ -243,69 +243,159 @@ class _CrewEditScreenState extends ConsumerState<CrewEditScreen> {
                   children: [
                     const SizedBox(height: AppSizes.paddingSM),
 
-                    _buildSection(
-                      label: '크루 이름',
-                      errorText: _nameError,
-                      child: TextField(
-                        controller: _nameController,
-                        maxLength: 20,
-                        style: AppTextStyles.body1
-                            .copyWith(color: AppColors.white),
-                        decoration: InputDecoration(
-                          hintText: '크루 이름을 입력하세요',
-                          hintStyle: AppTextStyles.body1
-                              .copyWith(color: AppColors.grey3),
-                          counterStyle: AppTextStyles.caption
-                              .copyWith(color: AppColors.grey3),
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: EdgeInsets.zero,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '크루 이름',
+                          style: AppTextStyles.caption.copyWith(color: AppColors.grey4),
                         ),
-                      ),
+                        const SizedBox(height: 4),
+                        TextField(
+                          controller: _nameController,
+                          maxLength: 20,
+                          style: AppTextStyles.body2
+                              .copyWith(color: AppColors.white),
+                          decoration: InputDecoration(
+                            hintText: '크루 이름을 입력하세요',
+                            hintStyle: AppTextStyles.body2
+                                .copyWith(color: AppColors.grey3),
+                            counterStyle: AppTextStyles.caption
+                                .copyWith(color: AppColors.grey3),
+                            filled: true,
+                            fillColor: AppColors.card,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: AppColors.grey1),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: _nameError != null ? AppColors.error : AppColors.grey1,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: _nameError != null ? AppColors.error : AppColors.grey2,
+                              ),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                          ),
+                        ),
+                        if (_nameError != null)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 14, top: 4),
+                            child: Text(
+                              _nameError!,
+                              style: AppTextStyles.caption.copyWith(color: AppColors.error),
+                            ),
+                          ),
+                      ],
                     ),
-                    const SizedBox(height: AppSizes.paddingSM),
+                    const SizedBox(height: AppSizes.paddingMD),
 
-                    _buildSection(
-                      label: '목표',
-                      errorText: _goalError,
-                      child: TextField(
-                        controller: _goalController,
-                        maxLength: 50,
-                        style: AppTextStyles.body1
-                            .copyWith(color: AppColors.white),
-                        decoration: InputDecoration(
-                          hintText: '목표를 입력하세요',
-                          hintStyle: AppTextStyles.body1
-                              .copyWith(color: AppColors.grey3),
-                          counterStyle: AppTextStyles.caption
-                              .copyWith(color: AppColors.grey3),
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: EdgeInsets.zero,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '목표',
+                          style: AppTextStyles.caption.copyWith(color: AppColors.grey4),
                         ),
-                      ),
+                        const SizedBox(height: 4),
+                        TextField(
+                          controller: _goalController,
+                          maxLength: 50,
+                          style: AppTextStyles.body2
+                              .copyWith(color: AppColors.white),
+                          decoration: InputDecoration(
+                            hintText: '목표를 입력하세요',
+                            hintStyle: AppTextStyles.body2
+                                .copyWith(color: AppColors.grey3),
+                            counterStyle: AppTextStyles.caption
+                                .copyWith(color: AppColors.grey3),
+                            filled: true,
+                            fillColor: AppColors.card,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: AppColors.grey1),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: _goalError != null ? AppColors.error : AppColors.grey1,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: _goalError != null ? AppColors.error : AppColors.grey2,
+                              ),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                          ),
+                        ),
+                        if (_goalError != null)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 14, top: 4),
+                            child: Text(
+                              _goalError!,
+                              style: AppTextStyles.caption.copyWith(color: AppColors.error),
+                            ),
+                          ),
+                      ],
                     ),
-                    const SizedBox(height: AppSizes.paddingSM),
+                    const SizedBox(height: AppSizes.paddingMD),
 
-                    _buildSection(
-                      label: '인증 내용',
-                      errorText: _verificationContentError,
-                      child: TextField(
-                        controller: _verificationContentController,
-                        maxLength: 50,
-                        style: AppTextStyles.body1
-                            .copyWith(color: AppColors.white),
-                        decoration: InputDecoration(
-                          hintText: '예: 운동 완료 인증샷 찍기',
-                          hintStyle: AppTextStyles.body1
-                              .copyWith(color: AppColors.grey3),
-                          counterStyle: AppTextStyles.caption
-                              .copyWith(color: AppColors.grey3),
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: EdgeInsets.zero,
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '인증 내용',
+                          style: AppTextStyles.caption.copyWith(color: AppColors.grey4),
                         ),
-                      ),
+                        const SizedBox(height: 4),
+                        TextField(
+                          controller: _verificationContentController,
+                          maxLength: 50,
+                          style: AppTextStyles.body2
+                              .copyWith(color: AppColors.white),
+                          decoration: InputDecoration(
+                            hintText: '예: 운동 완료 인증샷 찍기',
+                            hintStyle: AppTextStyles.body2
+                                .copyWith(color: AppColors.grey3),
+                            counterStyle: AppTextStyles.caption
+                                .copyWith(color: AppColors.grey3),
+                            filled: true,
+                            fillColor: AppColors.card,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: AppColors.grey1),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: _verificationContentError != null ? AppColors.error : AppColors.grey1,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(
+                                color: _verificationContentError != null ? AppColors.error : AppColors.grey2,
+                              ),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                          ),
+                        ),
+                        if (_verificationContentError != null)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 14, top: 4),
+                            child: Text(
+                              _verificationContentError!,
+                              style: AppTextStyles.caption.copyWith(color: AppColors.error),
+                            ),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: AppSizes.paddingLG),
                   ],
@@ -330,52 +420,6 @@ class _CrewEditScreenState extends ConsumerState<CrewEditScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildSection({
-    required String label,
-    required Widget child,
-    String? errorText,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(AppSizes.paddingMD),
-          decoration: BoxDecoration(
-            color: AppColors.card,
-            border: Border.all(
-              color: errorText != null ? AppColors.error : AppColors.grey1,
-            ),
-            borderRadius: BorderRadius.circular(AppSizes.cardRadius),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style:
-                    AppTextStyles.caption.copyWith(color: AppColors.grey4),
-              ),
-              const SizedBox(height: 8),
-              child,
-            ],
-          ),
-        ),
-        if (errorText != null)
-          Padding(
-            padding: const EdgeInsets.only(
-              left: AppSizes.paddingMD,
-              top: 4,
-            ),
-            child: Text(
-              errorText,
-              style: AppTextStyles.caption.copyWith(color: AppColors.error),
-            ),
-          ),
-      ],
     );
   }
 }

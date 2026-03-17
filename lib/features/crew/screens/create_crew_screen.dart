@@ -203,270 +203,369 @@ class _CreateCrewScreenState extends ConsumerState<CreateCrewScreen> {
                   children: [
                     const SizedBox(height: AppSizes.paddingSM),
 
-                    _buildSection(
+                    Column(
                       key: _nameKey,
-                      label: '크루 이름',
-                      child: TextField(
-                        controller: _nameController,
-                        focusNode: _nameFocus,
-                        maxLength: 20,
-                        style: AppTextStyles.body1
-                            .copyWith(color: AppColors.white),
-                        decoration: InputDecoration(
-                          hintText: '크루 이름을 입력하세요',
-                          hintStyle: AppTextStyles.body1
-                              .copyWith(color: AppColors.grey3),
-                          counterStyle: AppTextStyles.caption
-                              .copyWith(color: AppColors.grey3),
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: AppSizes.paddingSM),
-
-                    _buildSection(
-                      key: _goalKey,
-                      label: '목표',
-                      child: TextField(
-                        controller: _goalController,
-                        focusNode: _goalFocus,
-                        maxLength: 50,
-                        style: AppTextStyles.body1
-                            .copyWith(color: AppColors.white),
-                        decoration: InputDecoration(
-                          hintText: '목표를 입력하세요',
-                          hintStyle: AppTextStyles.body1
-                              .copyWith(color: AppColors.grey3),
-                          counterStyle: AppTextStyles.caption
-                              .copyWith(color: AppColors.grey3),
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: AppSizes.paddingSM),
-
-                    _buildSection(
-                      key: _verificationContentKey,
-                      label: '인증 내용',
-                      child: TextField(
-                        controller: _verificationContentController,
-                        focusNode: _verificationContentFocus,
-                        maxLength: 50,
-                        style: AppTextStyles.body1
-                            .copyWith(color: AppColors.white),
-                        decoration: InputDecoration(
-                          hintText: '예: 운동 완료 인증샷 찍기',
-                          hintStyle: AppTextStyles.body1
-                              .copyWith(color: AppColors.grey3),
-                          counterStyle: AppTextStyles.caption
-                              .copyWith(color: AppColors.grey3),
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: AppSizes.paddingSM),
-
-                    _buildSection(
-                      label: '최대 인원',
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          GestureDetector(
-                            onTap: _maxMembers > 2
-                                ? () => setState(() => _maxMembers--)
-                                : null,
-                            child: Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(color: AppColors.grey1),
-                              ),
-                              child: Icon(
-                                Icons.remove,
-                                color: _maxMembers > 2
-                                    ? AppColors.white
-                                    : AppColors.grey2,
-                                size: 20,
-                              ),
-                            ),
-                          ),
-                          Text(
-                            '$_maxMembers명',
-                            style: AppTextStyles.heading2
-                                .copyWith(color: AppColors.white),
-                          ),
-                          GestureDetector(
-                            onTap: _maxMembers < 10
-                                ? () => setState(() => _maxMembers++)
-                                : null,
-                            child: Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(color: AppColors.grey1),
-                              ),
-                              child: Icon(
-                                Icons.add,
-                                color: _maxMembers < 10
-                                    ? AppColors.white
-                                    : AppColors.grey2,
-                                size: 20,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: AppSizes.paddingSM),
-
-                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: _buildSection(
-                            label: '시작일',
-                            child: GestureDetector(
-                              onTap: () => _pickDate(isStart: true),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      _formatDate(_startDate),
-                                      style: AppTextStyles.body1.copyWith(
-                                        color: AppColors.white,
-                                      ),
-                                    ),
-                                  ),
-                                  const Icon(
-                                    Icons.calendar_today_outlined,
-                                    color: AppColors.grey3,
-                                    size: 20,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
+                        Text(
+                          '크루 이름',
+                          style: AppTextStyles.caption.copyWith(color: AppColors.grey4),
                         ),
-                        const SizedBox(width: AppSizes.paddingSM),
-                        Expanded(
-                          child: _buildSection(
-                            key: _endDateKey,
-                            label: '종료일',
-                            child: GestureDetector(
-                              onTap: () => _pickDate(isStart: false),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      _formatDate(_endDate),
-                                      style: AppTextStyles.body1.copyWith(
-                                        color: _endDate != null
-                                            ? AppColors.white
-                                            : AppColors.grey3,
-                                      ),
-                                    ),
-                                  ),
-                                  const Icon(
-                                    Icons.calendar_today_outlined,
-                                    color: AppColors.grey3,
-                                    size: 20,
-                                  ),
-                                ],
-                              ),
+                        const SizedBox(height: 4),
+                        TextField(
+                          controller: _nameController,
+                          focusNode: _nameFocus,
+                          maxLength: 20,
+                          style: AppTextStyles.body2
+                              .copyWith(color: AppColors.white),
+                          decoration: InputDecoration(
+                            hintText: '크루 이름을 입력하세요',
+                            hintStyle: AppTextStyles.body2
+                                .copyWith(color: AppColors.grey3),
+                            counterStyle: AppTextStyles.caption
+                                .copyWith(color: AppColors.grey3),
+                            filled: true,
+                            fillColor: AppColors.card,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: AppColors.grey1),
                             ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: AppColors.grey1),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: AppColors.grey2),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: AppSizes.paddingSM),
+                    const SizedBox(height: AppSizes.paddingMD),
 
-                    _buildSection(
-                      label: '인증 방식',
-                      child: ToggleSelector<VerificationType>(
-                        items: VerificationType.values,
-                        selectedItem: _verificationType,
-                        labelBuilder: (type) => switch (type) {
-                          VerificationType.text => '📝 텍스트만',
-                          VerificationType.photo => '📸 사진 필수',
-                        },
-                        onChanged: (type) {
-                          setState(() => _verificationType = type);
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: AppSizes.paddingSM),
-
-                    _buildSection(
-                      label: '인증 마감 시간',
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          GestureDetector(
-                            onTap: _hasDeadlineTime
-                                ? () => _showTimePickerSheet()
-                                : null,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  _hasDeadlineTime
-                                      ? _formatDeadlineLabel()
-                                      : '자정 기준',
-                                  style: AppTextStyles.body1.copyWith(
-                                    color: _hasDeadlineTime
-                                        ? AppColors.white
-                                        : AppColors.grey3,
-                                  ),
-                                ),
-                                if (_hasDeadlineTime) ...[
-                                  const SizedBox(width: 6),
-                                  const Icon(
-                                    Icons.edit,
-                                    color: AppColors.grey3,
-                                    size: 16,
-                                  ),
-                                ],
-                              ],
+                    Column(
+                      key: _goalKey,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '목표',
+                          style: AppTextStyles.caption.copyWith(color: AppColors.grey4),
+                        ),
+                        const SizedBox(height: 4),
+                        TextField(
+                          controller: _goalController,
+                          focusNode: _goalFocus,
+                          maxLength: 50,
+                          style: AppTextStyles.body2
+                              .copyWith(color: AppColors.white),
+                          decoration: InputDecoration(
+                            hintText: '목표를 입력하세요',
+                            hintStyle: AppTextStyles.body2
+                                .copyWith(color: AppColors.grey3),
+                            counterStyle: AppTextStyles.caption
+                                .copyWith(color: AppColors.grey3),
+                            filled: true,
+                            fillColor: AppColors.card,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: AppColors.grey1),
                             ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: AppColors.grey1),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: AppColors.grey2),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                           ),
-                          Switch(
-                            value: _hasDeadlineTime,
-                            activeTrackColor: AppColors.main,
-                            onChanged: (value) async {
-                              if (value) {
-                                setState(() => _hasDeadlineTime = true);
-                                _showTimePickerSheet();
-                              } else {
-                                setState(() {
-                                  _hasDeadlineTime = false;
-                                  _deadlineHour = 23;
-                                  _deadlineMinute = 0;
-                                });
-                              }
-                            },
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: AppSizes.paddingSM),
+                    const SizedBox(height: AppSizes.paddingMD),
 
-                    _buildSection(
-                      label: '중간 가입',
-                      child: ToggleSelector<bool>(
-                        items: const [true, false],
-                        selectedItem: _allowLateJoin,
-                        labelBuilder: (value) => value ? '허용' : '불가',
-                        onChanged: (value) {
-                          setState(() => _allowLateJoin = value);
-                        },
-                      ),
+                    Column(
+                      key: _verificationContentKey,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '인증 내용',
+                          style: AppTextStyles.caption.copyWith(color: AppColors.grey4),
+                        ),
+                        const SizedBox(height: 4),
+                        TextField(
+                          controller: _verificationContentController,
+                          focusNode: _verificationContentFocus,
+                          maxLength: 50,
+                          style: AppTextStyles.body2
+                              .copyWith(color: AppColors.white),
+                          decoration: InputDecoration(
+                            hintText: '예: 운동 완료 인증샷 찍기',
+                            hintStyle: AppTextStyles.body2
+                                .copyWith(color: AppColors.grey3),
+                            counterStyle: AppTextStyles.caption
+                                .copyWith(color: AppColors.grey3),
+                            filled: true,
+                            fillColor: AppColors.card,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: AppColors.grey1),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: AppColors.grey1),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide(color: AppColors.grey2),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSizes.paddingMD),
+
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '최대 인원',
+                          style: AppTextStyles.caption.copyWith(color: AppColors.grey4),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            GestureDetector(
+                              onTap: _maxMembers > 2
+                                  ? () => setState(() => _maxMembers--)
+                                  : null,
+                              child: Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: AppColors.grey1),
+                                ),
+                                child: Icon(
+                                  Icons.remove,
+                                  color: _maxMembers > 2
+                                      ? AppColors.white
+                                      : AppColors.grey2,
+                                  size: 20,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              '$_maxMembers명',
+                              style: AppTextStyles.heading2
+                                  .copyWith(color: AppColors.white),
+                            ),
+                            GestureDetector(
+                              onTap: _maxMembers < 10
+                                  ? () => setState(() => _maxMembers++)
+                                  : null,
+                              child: Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: AppColors.grey1),
+                                ),
+                                child: Icon(
+                                  Icons.add,
+                                  color: _maxMembers < 10
+                                      ? AppColors.white
+                                      : AppColors.grey2,
+                                  size: 20,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSizes.paddingMD),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '시작일',
+                                style: AppTextStyles.caption.copyWith(color: AppColors.grey4),
+                              ),
+                              const SizedBox(height: 4),
+                              GestureDetector(
+                                onTap: () => _pickDate(isStart: true),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        _formatDate(_startDate),
+                                        style: AppTextStyles.body1.copyWith(
+                                          color: AppColors.white,
+                                        ),
+                                      ),
+                                    ),
+                                    const Icon(
+                                      Icons.calendar_today_outlined,
+                                      color: AppColors.grey3,
+                                      size: 20,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: AppSizes.paddingSM),
+                        Expanded(
+                          child: Column(
+                            key: _endDateKey,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '종료일',
+                                style: AppTextStyles.caption.copyWith(color: AppColors.grey4),
+                              ),
+                              const SizedBox(height: 4),
+                              GestureDetector(
+                                onTap: () => _pickDate(isStart: false),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        _formatDate(_endDate),
+                                        style: AppTextStyles.body1.copyWith(
+                                          color: _endDate != null
+                                              ? AppColors.white
+                                              : AppColors.grey3,
+                                        ),
+                                      ),
+                                    ),
+                                    const Icon(
+                                      Icons.calendar_today_outlined,
+                                      color: AppColors.grey3,
+                                      size: 20,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSizes.paddingMD),
+
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '인증 방식',
+                          style: AppTextStyles.caption.copyWith(color: AppColors.grey4),
+                        ),
+                        const SizedBox(height: 4),
+                        ToggleSelector<VerificationType>(
+                          items: VerificationType.values,
+                          selectedItem: _verificationType,
+                          labelBuilder: (type) => switch (type) {
+                            VerificationType.text => '📝 텍스트만',
+                            VerificationType.photo => '📸 사진 필수',
+                          },
+                          onChanged: (type) {
+                            setState(() => _verificationType = type);
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSizes.paddingMD),
+
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '인증 마감 시간',
+                          style: AppTextStyles.caption.copyWith(color: AppColors.grey4),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            GestureDetector(
+                              onTap: _hasDeadlineTime
+                                  ? () => _showTimePickerSheet()
+                                  : null,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    _hasDeadlineTime
+                                        ? _formatDeadlineLabel()
+                                        : '자정 기준',
+                                    style: AppTextStyles.body1.copyWith(
+                                      color: _hasDeadlineTime
+                                          ? AppColors.white
+                                          : AppColors.grey3,
+                                    ),
+                                  ),
+                                  if (_hasDeadlineTime) ...[
+                                    const SizedBox(width: 6),
+                                    const Icon(
+                                      Icons.edit,
+                                      color: AppColors.grey3,
+                                      size: 16,
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            Switch(
+                              value: _hasDeadlineTime,
+                              activeTrackColor: AppColors.main,
+                              onChanged: (value) async {
+                                if (value) {
+                                  setState(() => _hasDeadlineTime = true);
+                                  _showTimePickerSheet();
+                                } else {
+                                  setState(() {
+                                    _hasDeadlineTime = false;
+                                    _deadlineHour = 23;
+                                    _deadlineMinute = 0;
+                                  });
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSizes.paddingMD),
+
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '중간 가입',
+                          style: AppTextStyles.caption.copyWith(color: AppColors.grey4),
+                        ),
+                        const SizedBox(height: 4),
+                        ToggleSelector<bool>(
+                          items: const [true, false],
+                          selectedItem: _allowLateJoin,
+                          labelBuilder: (value) => value ? '허용' : '불가',
+                          onChanged: (value) {
+                            setState(() => _allowLateJoin = value);
+                          },
+                        ),
+                      ],
                     ),
                     const SizedBox(height: AppSizes.paddingLG),
                   ],
@@ -490,34 +589,6 @@ class _CreateCrewScreenState extends ConsumerState<CreateCrewScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildSection({
-    Key? key,
-    required String label,
-    required Widget child,
-  }) {
-    return Container(
-      key: key,
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSizes.paddingMD),
-      decoration: BoxDecoration(
-        color: AppColors.card,
-        border: Border.all(color: AppColors.grey1),
-        borderRadius: BorderRadius.circular(AppSizes.cardRadius),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: AppTextStyles.caption.copyWith(color: AppColors.grey4),
-          ),
-          const SizedBox(height: 8),
-          child,
-        ],
       ),
     );
   }

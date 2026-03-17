@@ -128,6 +128,14 @@ class ApiClient {
     }
   }
 
+  Future<void> delete(String path) async {
+    try {
+      await _dio.delete(path);
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
   Dio get dio => _dio;
 
   ApiResponse<T> _parseResponse<T>(

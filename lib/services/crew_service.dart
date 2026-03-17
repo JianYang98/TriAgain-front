@@ -77,6 +77,23 @@ class CrewService {
     return response.data!;
   }
 
+  Future<CrewDetail> editCrew(String crewId, Map<String, dynamic> changes) async {
+    final response = await _apiClient.patch<CrewDetail>(
+      '/crews/$crewId',
+      data: changes,
+      fromData: (json) => CrewDetail.fromJson(json as Map<String, dynamic>),
+    );
+    return response.data!;
+  }
+
+  Future<void> deleteCrew(String crewId) async {
+    await _apiClient.delete('/crews/$crewId');
+  }
+
+  Future<void> leaveCrew(String crewId) async {
+    await _apiClient.delete('/crews/$crewId/members/me');
+  }
+
   String _formatDate(DateTime date) {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }

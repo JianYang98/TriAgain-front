@@ -8,7 +8,6 @@ import 'package:triagain/core/constants/app_text_styles.dart';
 import 'package:triagain/core/network/api_exception.dart';
 import 'package:triagain/features/crew/widgets/search_crew_card.dart';
 import 'package:triagain/models/crew.dart';
-import 'package:triagain/providers/crew_provider.dart';
 import 'package:triagain/services/crew_search_service.dart';
 
 class CrewSearchScreen extends ConsumerStatefulWidget {
@@ -29,7 +28,6 @@ class _CrewSearchScreenState extends ConsumerState<CrewSearchScreen> {
   bool _hasNext = false;
   int _page = 0;
   String? _errorMessage;
-  String? _joiningCrewId;
 
   @override
   void initState() {
@@ -117,27 +115,6 @@ class _CrewSearchScreenState extends ConsumerState<CrewSearchScreen> {
     }
   }
 
-  Future<void> _handleJoin(String crewId) async {
-    setState(() => _joiningCrewId = crewId);
-    try {
-      final service = ref.read(crewSearchServiceProvider);
-      await service.joinPublicCrew(crewId);
-      ref.invalidate(crewListProvider);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('가입되었습니다!')),
-      );
-      context.push('/crew/$crewId');
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.message)),
-      );
-    } finally {
-      if (mounted) setState(() => _joiningCrewId = null);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -212,16 +189,13 @@ class _CrewSearchScreenState extends ConsumerState<CrewSearchScreen> {
       padding: const EdgeInsets.symmetric(
         horizontal: AppSizes.paddingMD,
       ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            _buildCategoryChip(null, '전체'),
-            ...CrewCategory.values.map(
-              (cat) => _buildCategoryChip(cat, '${_categoryEmoji(cat)} ${cat.label}'),
-            ),
-          ],
-        ),
+      child: Row(
+        children: [
+          Expanded(child: _buildCategoryChip(null, '전체')),
+          ...CrewCategory.values.map(
+            (cat) => Expanded(child: _buildCategoryChip(cat, cat.label)),
+          ),
+        ],
       ),
     );
   }
@@ -229,11 +203,12 @@ class _CrewSearchScreenState extends ConsumerState<CrewSearchScreen> {
   Widget _buildCategoryChip(CrewCategory? category, String label) {
     final isSelected = _selectedCategory == category;
     return Padding(
-      padding: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 2),
       child: GestureDetector(
         onTap: () => _onCategorySelected(category),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          alignment: Alignment.center,
           decoration: BoxDecoration(
             color: isSelected ? AppColors.main : AppColors.card,
             borderRadius: BorderRadius.circular(AppSizes.badgeRadius),
@@ -244,6 +219,7 @@ class _CrewSearchScreenState extends ConsumerState<CrewSearchScreen> {
             style: AppTextStyles.body2.copyWith(
               color: isSelected ? AppColors.white : AppColors.grey3,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+              fontSize: 13,
             ),
           ),
         ),
@@ -305,19 +281,11 @@ class _CrewSearchScreenState extends ConsumerState<CrewSearchScreen> {
           padding: const EdgeInsets.only(bottom: AppSizes.paddingMD),
           child: SearchCrewCard(
             crew: crew,
-            isJoining: _joiningCrewId == crew.id,
-            onJoin: () => _handleJoin(crew.id),
+            onTap: () => context.push('/crew/confirm?crewId=${crew.id}'),
           ),
         );
       },
     );
   }
 
-  String _categoryEmoji(CrewCategory cat) => switch (cat) {
-        CrewCategory.exercise => '\u{1F4AA}',
-        CrewCategory.study => '\u{1F4DA}',
-        CrewCategory.lifestyle => '\u{1F331}',
-        CrewCategory.selfDev => '\u{1F680}',
-        CrewCategory.etc => '\u{2728}',
-      };
 }

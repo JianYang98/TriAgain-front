@@ -37,12 +37,4 @@ class CrewSearchService {
     return response.data!;
   }
 
-  Future<JoinCrewResult> joinPublicCrew(String crewId) async {
-    final response = await _apiClient.post<JoinCrewResult>(
-      '/crews/$crewId/join',
-      fromData: (json) =>
-          JoinCrewResult.fromJson(json as Map<String, dynamic>),
-    );
-    return response.data!;
-  }
 }

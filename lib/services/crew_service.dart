@@ -93,6 +93,23 @@ class CrewService {
     await _apiClient.delete('/crews/$crewId');
   }
 
+  Future<CrewDetail> getCrewPreview(String crewId) async {
+    final response = await _apiClient.get<CrewDetail>(
+      '/crews/$crewId/preview',
+      fromData: (json) => CrewDetail.fromJson(json as Map<String, dynamic>),
+    );
+    return response.data!;
+  }
+
+  Future<JoinCrewResult> joinCrewById(String crewId) async {
+    final response = await _apiClient.post<JoinCrewResult>(
+      '/crews/$crewId/join',
+      fromData: (json) =>
+          JoinCrewResult.fromJson(json as Map<String, dynamic>),
+    );
+    return response.data!;
+  }
+
   Future<void> leaveCrew(String crewId) async {
     await _apiClient.delete('/crews/$crewId/members/me');
   }

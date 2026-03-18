@@ -7,118 +7,111 @@ import 'package:triagain/widgets/app_card.dart';
 
 class SearchCrewCard extends StatelessWidget {
   final SearchCrewItem crew;
-  final VoidCallback? onJoin;
-  final bool isJoining;
+  final VoidCallback? onTap;
 
   const SearchCrewCard({
     super.key,
     required this.crew,
-    this.onJoin,
-    this.isJoining = false,
+    this.onTap,
   });
-
-  String get _categoryEmoji => switch (crew.category) {
-        CrewCategory.exercise => '\u{1F4AA}',
-        CrewCategory.study => '\u{1F4DA}',
-        CrewCategory.lifestyle => '\u{1F331}',
-        CrewCategory.selfDev => '\u{1F680}',
-        CrewCategory.etc => '\u{2728}',
-        null => '',
-      };
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 크루 이름 + 카테고리 이모지
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  crew.name,
-                  style:
-                      AppTextStyles.heading3.copyWith(color: AppColors.white),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if (crew.category != null)
-                Text(
-                  _categoryEmoji,
-                  style: const TextStyle(fontSize: 20),
-                ),
-            ],
-          ),
-          const SizedBox(height: AppSizes.paddingXS),
-
-          // 목표
-          Text(
-            crew.goal,
-            style: AppTextStyles.body2.copyWith(color: AppColors.grey3),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: AppSizes.paddingMD),
-
-          // 인원 + 상태 뱃지
-          Row(
-            children: [
-              const Icon(Icons.people_outline, color: AppColors.grey3, size: 16),
-              const SizedBox(width: 4),
-              Text(
-                '${crew.currentMembers}/${crew.maxMembers}명',
-                style: AppTextStyles.body2.copyWith(color: AppColors.grey3),
-              ),
-              const SizedBox(width: 12),
-              _buildStatusBadge(),
-            ],
-          ),
-          const SizedBox(height: AppSizes.paddingSM),
-
-          // 기간 + 참여 버튼
-          Row(
-            children: [
-              Text(
-                '${_formatDate(crew.startDate)} ~ ${_formatDate(crew.endDate)}',
-                style: AppTextStyles.caption.copyWith(color: AppColors.grey3),
-              ),
-              const Spacer(),
-              SizedBox(
-                height: 34,
-                child: ElevatedButton(
-                  onPressed: isJoining ? null : onJoin,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.main,
-                    disabledBackgroundColor: AppColors.grey2,
-                    shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(AppSizes.buttonRadius),
-                    ),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16),
+    return GestureDetector(
+      onTap: onTap,
+      child: AppCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 크루 이름 + 카테고리 뱃지
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    crew.name,
+                    style:
+                        AppTextStyles.heading3.copyWith(color: AppColors.white),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  child: isJoining
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppColors.white,
-                          ),
-                        )
-                      : Text(
-                          crew.status == CrewStatus.recruiting
-                              ? '참여하기'
-                              : '합류하기',
-                          style: AppTextStyles.caption
-                              .copyWith(color: AppColors.white, fontWeight: FontWeight.w600),
-                        ),
                 ),
-              ),
-            ],
-          ),
-        ],
+                if (crew.category != null)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: AppColors.grey1,
+                      borderRadius:
+                          BorderRadius.circular(AppSizes.badgeRadius),
+                    ),
+                    child: Text(
+                      crew.category!.label,
+                      style: AppTextStyles.caption
+                          .copyWith(color: AppColors.grey3),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: AppSizes.paddingXS),
+
+            // 목표
+            Text(
+              crew.goal,
+              style: AppTextStyles.body2.copyWith(color: AppColors.grey3),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: AppSizes.paddingMD),
+
+            // 인원 + 상태 뱃지
+            Row(
+              children: [
+                const Icon(Icons.people_outline,
+                    color: AppColors.grey3, size: 16),
+                const SizedBox(width: 4),
+                Text(
+                  '${crew.currentMembers}/${crew.maxMembers}명',
+                  style: AppTextStyles.body2.copyWith(color: AppColors.grey3),
+                ),
+                const SizedBox(width: 12),
+                _buildStatusBadge(),
+              ],
+            ),
+            const SizedBox(height: AppSizes.paddingSM),
+
+            // 기간 + 상세보기 버튼
+            Row(
+              children: [
+                Text(
+                  '${_formatDate(crew.startDate)} ~ ${_formatDate(crew.endDate)}',
+                  style:
+                      AppTextStyles.caption.copyWith(color: AppColors.grey3),
+                ),
+                const Spacer(),
+                SizedBox(
+                  height: 34,
+                  child: ElevatedButton(
+                    onPressed: onTap,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.main,
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppSizes.buttonRadius),
+                      ),
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 16),
+                    ),
+                    child: Text(
+                      '상세보기',
+                      style: AppTextStyles.caption.copyWith(
+                          color: AppColors.white,
+                          fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

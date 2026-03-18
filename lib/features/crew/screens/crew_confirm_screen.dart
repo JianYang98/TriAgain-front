@@ -29,18 +29,25 @@ class _CrewConfirmScreenState extends ConsumerState<CrewConfirmScreen> {
   bool _isJoining = false;
 
   Future<void> _handleJoin() async {
-    if (widget.inviteCode == null) return;
     setState(() => _isJoining = true);
     try {
       final crewService = ref.read(crewServiceProvider);
-      await crewService.joinCrew(widget.inviteCode!);
+      if (widget.inviteCode != null) {
+        await crewService.joinCrew(widget.inviteCode!);
+        ref.invalidate(crewByInviteCodeProvider(widget.inviteCode!));
+      } else {
+        await crewService.joinCrewById(widget.crewId);
+        ref.invalidate(crewPreviewProvider(widget.crewId));
+      }
       ref.invalidate(crewListProvider);
-      ref.invalidate(crewByInviteCodeProvider(widget.inviteCode!));
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('가입되었습니다!')),
-        );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('가입되었습니다!')),
+      );
+      if (widget.inviteCode != null) {
         context.go('/home');
+      } else {
+        context.push('/crew/${widget.crewId}');
       }
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -54,9 +61,11 @@ class _CrewConfirmScreenState extends ConsumerState<CrewConfirmScreen> {
 
   String? _getBlockedMessage(String? reason) {
     return switch (reason) {
-      'CREW_FULL' => '정원이 초과되었습니다',
-      'LATE_JOIN_NOT_ALLOWED' => '이미 시작된 크루입니다',
+      'CREW_FULL' => '정원이 가득 찼습니다',
+      'LATE_JOIN_NOT_ALLOWED' => '중간 가입이 허용되지 않는 크루입니다',
       'CREW_ENDED' => '종료된 크루입니다',
+      'ALREADY_MEMBER' => '이미 참여 중인 크루입니다',
+      'CREW_JOIN_DEADLINE_PASSED' => '참여 마감 기한이 지났습니다',
       _ => null,
     };
   }
@@ -65,7 +74,7 @@ class _CrewConfirmScreenState extends ConsumerState<CrewConfirmScreen> {
   Widget build(BuildContext context) {
     final crewAsync = widget.inviteCode != null
         ? ref.watch(crewByInviteCodeProvider(widget.inviteCode!))
-        : ref.watch(crewDetailProvider(widget.crewId));
+        : ref.watch(crewPreviewProvider(widget.crewId));
 
     return Scaffold(
       body: SafeArea(
@@ -118,7 +127,7 @@ class _CrewConfirmScreenState extends ConsumerState<CrewConfirmScreen> {
                           if (widget.inviteCode != null) {
                             ref.invalidate(crewByInviteCodeProvider(widget.inviteCode!));
                           } else {
-                            ref.invalidate(crewDetailProvider(widget.crewId));
+                            ref.invalidate(crewPreviewProvider(widget.crewId));
                           }
                         },
                         child: Text(

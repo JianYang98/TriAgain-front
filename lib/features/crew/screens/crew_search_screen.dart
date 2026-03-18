@@ -102,12 +102,14 @@ class _CrewSearchScreenState extends ConsumerState<CrewSearchScreen> {
       });
     } on ApiException catch (e) {
       if (!mounted) return;
+      if (append) _page--;
       setState(() {
         _errorMessage = e.message;
         _isLoading = false;
       });
     } catch (_) {
       if (!mounted) return;
+      if (append) _page--;
       setState(() {
         _errorMessage = '검색 중 오류가 발생했습니다.';
         _isLoading = false;

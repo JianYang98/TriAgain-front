@@ -38,6 +38,10 @@ class HomeScreen extends ConsumerWidget {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.search, color: AppColors.white),
+            onPressed: () => context.push('/crew/search'),
+          ),
+          IconButton(
             icon: const Icon(Icons.person_outline, color: AppColors.white),
             onPressed: () => context.push('/mypage'),
           ),

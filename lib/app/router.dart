@@ -10,6 +10,7 @@ import 'package:triagain/features/crew/screens/crew_success_screen.dart';
 import 'package:triagain/features/crew/screens/crew_confirm_screen.dart';
 import 'package:triagain/features/crew/screens/crew_detail_screen.dart';
 import 'package:triagain/features/crew/screens/crew_edit_screen.dart';
+import 'package:triagain/features/crew/screens/crew_search_screen.dart';
 import 'package:triagain/features/mypage/screens/mypage_screen.dart';
 import 'package:triagain/features/verification/screens/verification_screen.dart';
 
@@ -79,6 +80,10 @@ GoRouter createRouter({String initialLocation = '/login'}) {
           crewId: state.uri.queryParameters['crewId'] ?? '',
           inviteCode: state.uri.queryParameters['inviteCode'],
         ),
+      ),
+      GoRoute(
+        path: '/crew/search',
+        builder: (context, state) => const CrewSearchScreen(),
       ),
       GoRoute(
         path: '/crew/:id/edit',

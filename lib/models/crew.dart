@@ -284,6 +284,78 @@ class CrewDetail {
   }
 }
 
+class SearchCrewItem {
+  final String id;
+  final String name;
+  final String goal;
+  final String? verificationContent;
+  final CrewCategory? category;
+  final VerificationType verificationType;
+  final bool allowLateJoin;
+  final int currentMembers;
+  final int maxMembers;
+  final CrewStatus status;
+  final DateTime startDate;
+  final DateTime endDate;
+  final DateTime createdAt;
+
+  const SearchCrewItem({
+    required this.id,
+    required this.name,
+    required this.goal,
+    this.verificationContent,
+    this.category,
+    required this.verificationType,
+    required this.allowLateJoin,
+    required this.currentMembers,
+    required this.maxMembers,
+    required this.status,
+    required this.startDate,
+    required this.endDate,
+    required this.createdAt,
+  });
+
+  factory SearchCrewItem.fromJson(Map<String, dynamic> json) {
+    return SearchCrewItem(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      goal: json['goal'] as String,
+      verificationContent: json['verificationContent'] as String?,
+      category: json['category'] != null
+          ? CrewCategory.fromString(json['category'] as String)
+          : null,
+      verificationType:
+          VerificationType.fromString(json['verificationType'] as String),
+      allowLateJoin: json['allowLateJoin'] as bool,
+      currentMembers: json['currentMembers'] as int,
+      maxMembers: json['maxMembers'] as int,
+      status: CrewStatus.fromString(json['status'] as String),
+      startDate: DateTime.parse(json['startDate'] as String),
+      endDate: DateTime.parse(json['endDate'] as String),
+      createdAt: DateTime.parse(json['createdAt'] as String),
+    );
+  }
+}
+
+class SearchCrewResult {
+  final List<SearchCrewItem> crews;
+  final bool hasNext;
+
+  const SearchCrewResult({
+    required this.crews,
+    required this.hasNext,
+  });
+
+  factory SearchCrewResult.fromJson(Map<String, dynamic> json) {
+    return SearchCrewResult(
+      crews: (json['crews'] as List)
+          .map((e) => SearchCrewItem.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      hasNext: json['hasNext'] as bool,
+    );
+  }
+}
+
 class CreateCrewResult {
   final String crewId;
   final String inviteCode;

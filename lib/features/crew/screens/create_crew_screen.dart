@@ -32,11 +32,17 @@ class _CreateCrewScreenState extends ConsumerState<CreateCrewScreen> {
   final _goalKey = GlobalKey();
   final _verificationContentKey = GlobalKey();
   final _endDateKey = GlobalKey();
+  final _categoryKey = GlobalKey();
+  final _verificationTypeKey = GlobalKey();
+  final _allowLateJoinKey = GlobalKey();
+  final _visibilityKey = GlobalKey();
   int _maxMembers = 5;
   late DateTime _startDate;
   DateTime? _endDate;
-  VerificationType _verificationType = VerificationType.photo;
-  bool _allowLateJoin = false;
+  VerificationType? _verificationType;
+  CrewCategory? _category;
+  bool? _allowLateJoin;
+  bool? _isPublic;
   bool _hasDeadlineTime = false;
   int _deadlineHour = 23;
   int _deadlineMinute = 0;
@@ -65,6 +71,17 @@ class _CreateCrewScreenState extends ConsumerState<CreateCrewScreen> {
     _goalFocus.dispose();
     _verificationContentFocus.dispose();
     super.dispose();
+  }
+
+  Future<void> _scrollTo(GlobalKey key) async {
+    final ctx = key.currentContext;
+    if (ctx != null) {
+      await Scrollable.ensureVisible(
+        ctx,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
   }
 
   Future<void> _scrollToAndFocus(GlobalKey key, FocusNode focus) async {
@@ -105,6 +122,20 @@ class _CreateCrewScreenState extends ConsumerState<CreateCrewScreen> {
       _scrollToAndFocus(_verificationContentKey, _verificationContentFocus);
       return;
     }
+    if (_category == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('카테고리를 선택해주세요')),
+      );
+      _scrollTo(_categoryKey);
+      return;
+    }
+    if (_verificationType == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('인증 방식을 선택해주세요')),
+      );
+      _scrollTo(_verificationTypeKey);
+      return;
+    }
     if (_endDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('종료일을 선택해주세요')),
@@ -120,6 +151,20 @@ class _CreateCrewScreenState extends ConsumerState<CreateCrewScreen> {
       _pickDate(isStart: false);
       return;
     }
+    if (_allowLateJoin == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('중간 가입 허용 여부를 선택해주세요')),
+      );
+      _scrollTo(_allowLateJoinKey);
+      return;
+    }
+    if (_isPublic == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('공개 설정을 선택해주세요')),
+      );
+      _scrollTo(_visibilityKey);
+      return;
+    }
 
     setState(() => _isSubmitting = true);
 
@@ -133,11 +178,13 @@ class _CreateCrewScreenState extends ConsumerState<CreateCrewScreen> {
         name: name,
         goal: goal,
         verificationContent: verificationContent,
-        verificationType: _verificationType,
+        verificationType: _verificationType!,
         maxMembers: _maxMembers,
         startDate: _startDate,
         endDate: _endDate!,
-        allowLateJoin: _allowLateJoin,
+        allowLateJoin: _allowLateJoin!,
+        category: _category!,
+        visibility: _isPublic! ? CrewVisibility.public : CrewVisibility.private,
         deadlineTime: deadlineTime,
       );
 
@@ -330,6 +377,49 @@ class _CreateCrewScreenState extends ConsumerState<CreateCrewScreen> {
                     const SizedBox(height: AppSizes.paddingMD),
 
                     Column(
+                      key: _categoryKey,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '카테고리',
+                          style: AppTextStyles.caption.copyWith(color: AppColors.grey4),
+                        ),
+                        const SizedBox(height: 4),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: CrewCategory.values.map((cat) {
+                            final isSelected = _category == cat;
+                            return GestureDetector(
+                              onTap: () => setState(() => _category = cat),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isSelected ? AppColors.main : AppColors.card,
+                                  borderRadius: BorderRadius.circular(AppSizes.buttonRadius),
+                                  border: isSelected
+                                      ? null
+                                      : Border.all(color: AppColors.grey1),
+                                ),
+                                child: Text(
+                                  cat.label,
+                                  style: AppTextStyles.body2.copyWith(
+                                    color: isSelected ? AppColors.white : AppColors.grey3,
+                                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSizes.paddingMD),
+
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
@@ -466,6 +556,7 @@ class _CreateCrewScreenState extends ConsumerState<CreateCrewScreen> {
                     const SizedBox(height: AppSizes.paddingMD),
 
                     Column(
+                      key: _verificationTypeKey,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
@@ -550,6 +641,7 @@ class _CreateCrewScreenState extends ConsumerState<CreateCrewScreen> {
                     const SizedBox(height: AppSizes.paddingMD),
 
                     Column(
+                      key: _allowLateJoinKey,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
@@ -565,6 +657,34 @@ class _CreateCrewScreenState extends ConsumerState<CreateCrewScreen> {
                             setState(() => _allowLateJoin = value);
                           },
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSizes.paddingMD),
+
+                    Column(
+                      key: _visibilityKey,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '공개 설정',
+                          style: AppTextStyles.caption.copyWith(color: AppColors.grey4),
+                        ),
+                        const SizedBox(height: 4),
+                        ToggleSelector<bool>(
+                          items: const [false, true],
+                          selectedItem: _isPublic,
+                          labelBuilder: (value) => value ? '공개' : '비공개',
+                          onChanged: (value) {
+                            setState(() => _isPublic = value);
+                          },
+                        ),
+                        if (_isPublic == true) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            '공개 크루는 검색을 통해 누구나 찾을 수 있어요',
+                            style: AppTextStyles.caption.copyWith(color: AppColors.grey3),
+                          ),
+                        ],
                       ],
                     ),
                     const SizedBox(height: AppSizes.paddingLG),

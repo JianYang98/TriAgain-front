@@ -38,6 +38,8 @@ class CrewService {
     required DateTime startDate,
     required DateTime endDate,
     required bool allowLateJoin,
+    required CrewCategory category,
+    CrewVisibility visibility = CrewVisibility.private,
     String? deadlineTime,
   }) async {
     final response = await _apiClient.post<CreateCrewResult>(
@@ -51,6 +53,8 @@ class CrewService {
         'startDate': _formatDate(startDate),
         'endDate': _formatDate(endDate),
         'allowLateJoin': allowLateJoin,
+        'category': category.toJson(),
+        'visibility': visibility.toJson(),
         if (deadlineTime != null) 'deadlineTime': deadlineTime,
       },
       fromData: (json) =>

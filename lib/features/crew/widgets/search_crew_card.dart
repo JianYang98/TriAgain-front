@@ -23,33 +23,11 @@ class SearchCrewCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 크루 이름 + 카테고리 뱃지
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    crew.name,
-                    style:
-                        AppTextStyles.heading3.copyWith(color: AppColors.white),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                if (crew.category != null)
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: AppColors.grey1,
-                      borderRadius:
-                          BorderRadius.circular(AppSizes.badgeRadius),
-                    ),
-                    child: Text(
-                      crew.category!.label,
-                      style: AppTextStyles.caption
-                          .copyWith(color: AppColors.grey3),
-                    ),
-                  ),
-              ],
+            // 크루 이름
+            Text(
+              crew.name,
+              style: AppTextStyles.heading3.copyWith(color: AppColors.white),
+              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: AppSizes.paddingXS),
 
@@ -60,52 +38,31 @@ class SearchCrewCard extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: AppSizes.paddingMD),
-
-            // 인원 + 상태 뱃지
-            Row(
-              children: [
-                const Icon(Icons.people_outline,
-                    color: AppColors.grey3, size: 16),
-                const SizedBox(width: 4),
-                Text(
-                  '${crew.currentMembers}/${crew.maxMembers}명',
-                  style: AppTextStyles.body2.copyWith(color: AppColors.grey3),
-                ),
-                const SizedBox(width: 12),
-                _buildStatusBadge(),
-              ],
-            ),
             const SizedBox(height: AppSizes.paddingSM),
 
-            // 기간 + 상세보기 버튼
+            // [카테고리] · 👤 인원 · 상태 · 기간
             Row(
               children: [
+                if (crew.category != null) ...[
+                  _buildCategoryTag(),
+                  _buildDot(),
+                ],
+                const Icon(Icons.people_outline,
+                    color: AppColors.grey3, size: 14),
+                const SizedBox(width: 2),
                 Text(
-                  '${_formatDate(crew.startDate)} ~ ${_formatDate(crew.endDate)}',
-                  style:
-                      AppTextStyles.caption.copyWith(color: AppColors.grey3),
+                  '${crew.currentMembers}/${crew.maxMembers}명',
+                  style: AppTextStyles.caption.copyWith(color: AppColors.grey3),
                 ),
-                const Spacer(),
-                SizedBox(
-                  height: 34,
-                  child: ElevatedButton(
-                    onPressed: onTap,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.main,
-                      shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppSizes.buttonRadius),
-                      ),
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 16),
-                    ),
-                    child: Text(
-                      '상세보기',
-                      style: AppTextStyles.caption.copyWith(
-                          color: AppColors.white,
-                          fontWeight: FontWeight.w600),
-                    ),
+                _buildDot(),
+                _buildStatusText(),
+                _buildDot(),
+                Flexible(
+                  child: Text(
+                    '${_formatDate(crew.startDate)}~${_formatDate(crew.endDate)}',
+                    style:
+                        AppTextStyles.caption.copyWith(color: AppColors.grey3),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -116,23 +73,41 @@ class SearchCrewCard extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusBadge() {
+  Widget _buildCategoryTag() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppSizes.badgeRadius),
+        border: Border.all(color: AppColors.main),
+      ),
+      child: Text(
+        crew.category!.label,
+        style: AppTextStyles.caption
+            .copyWith(color: AppColors.main, fontSize: 11),
+      ),
+    );
+  }
+
+  Widget _buildDot() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Text(
+        '\u{00B7}',
+        style: AppTextStyles.caption.copyWith(color: AppColors.grey3),
+      ),
+    );
+  }
+
+  Widget _buildStatusText() {
     final (color, label) = switch (crew.status) {
       CrewStatus.recruiting => (AppColors.warning, '모집중'),
       CrewStatus.active => (AppColors.success, '진행중'),
       CrewStatus.completed => (AppColors.grey3, '완료'),
     };
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(AppSizes.badgeRadius),
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.caption.copyWith(color: color),
-      ),
+    return Text(
+      label,
+      style: AppTextStyles.caption.copyWith(color: color),
     );
   }
 

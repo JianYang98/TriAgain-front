@@ -436,7 +436,9 @@ Content-Type: application/json
   "endDate": "2026-03-24",
   "verificationType": "PHOTO",
   "allowLateJoin": true,
-  "deadlineTime": "23:59:59"
+  "deadlineTime": "23:59:59",
+  "category": "EXERCISE",
+  "visibility": "PUBLIC"
 }
 ```
 
@@ -459,11 +461,56 @@ Content-Type: application/json
     "allowLateJoin": true,
     "inviteCode": "ABC123",
     "createdAt": "2026-03-09T10:00:00",
-    "deadlineTime": "23:59:59"
+    "deadlineTime": "23:59:59",
+    "category": "EXERCISE",
+    "visibility": "PUBLIC"
   },
   "error": null
 }
 ```
+
+**추가 필드:**
+- `category`: (필수) 크루 카테고리 — `EXERCISE` / `STUDY` / `LIFESTYLE` / `SELF_DEV` / `ETC`
+- `visibility`: (선택) 공개 설정 — `PUBLIC` / `PRIVATE` (기본값 `PRIVATE`)
+
+---
+
+### GET /crews (내 크루 목록)
+
+내가 참여 중인 크루 목록을 조회한다.
+
+**요청 (Request)**
+```
+GET /crews HTTP/1.1
+Authorization: Bearer <token>
+```
+
+**성공 응답 (200 OK)**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "crew_123",
+      "name": "새벽 러닝 크루",
+      "goal": "매일 아침 5km 러닝",
+      "verificationContent": "러닝 완료 후 기록 인증",
+      "verificationType": "PHOTO",
+      "currentMembers": 3,
+      "maxMembers": 5,
+      "status": "ACTIVE",
+      "startDate": "2026-03-10",
+      "endDate": "2026-03-24",
+      "createdAt": "2026-03-01T10:00:00",
+      "category": "EXERCISE",
+      "visibility": "PUBLIC"
+    }
+  ],
+  "error": null
+}
+```
+
+**참고:** `category`는 nullable — 기존 크루는 `null`일 수 있음.
 
 ---
 
@@ -494,6 +541,8 @@ Authorization: Bearer <token>
     "endDate": "2026-03-24",
     "allowLateJoin": true,
     "deadlineTime": "23:59:59",
+    "category": "EXERCISE",
+    "visibility": "PUBLIC",
     "members": [
       {
         "userId": "user-uuid-1",
@@ -613,6 +662,8 @@ Authorization: Bearer <token>
     "inviteCode": "ABC123",
     "createdAt": "2026-03-01T10:00:00",
     "deadlineTime": "23:59:59",
+    "category": "EXERCISE",
+    "visibility": "PUBLIC",
     "members": [
       {
         "userId": "user-uuid-1",
@@ -654,6 +705,182 @@ Authorization: Bearer <token>
 |------|------|--------|------|
 | 403 | CR009 | 크루 멤버만 접근할 수 있습니다. | 비멤버 접근 |
 | 404 | CR001 | 크루를 찾을 수 없습니다. | 존재하지 않는 crewId |
+
+---
+
+### PATCH /crews/{crewId} (크루 수정)
+
+크루장이 크루 정보를 수정한다. 변경할 필드만 포함하면 된다.
+
+**요청 (Request)**
+```
+PATCH /crews/{crewId} HTTP/1.1
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+```json
+{
+  "name": "수정된 크루 이름",
+  "goal": "수정된 목표",
+  "verificationContent": "수정된 인증 내용",
+  "category": "STUDY",
+  "visibility": "PUBLIC"
+}
+```
+
+**필드 설명:**
+- `name`: (선택) 크루 이름
+- `goal`: (선택) 크루 목표
+- `verificationContent`: (선택) 인증 내용
+- `category`: (선택) 크루 카테고리 — `EXERCISE` / `STUDY` / `LIFESTYLE` / `SELF_DEV` / `ETC`
+- `visibility`: (선택) 공개 설정 — `PUBLIC` / `PRIVATE`
+
+**성공 응답 (200 OK)**
+```json
+{
+  "success": true,
+  "data": {
+    "id": "crew_123",
+    "creatorId": "user_456",
+    "name": "수정된 크루 이름",
+    "goal": "수정된 목표",
+    "verificationContent": "수정된 인증 내용",
+    "verificationType": "PHOTO",
+    "maxMembers": 5,
+    "currentMembers": 3,
+    "status": "ACTIVE",
+    "startDate": "2026-03-10",
+    "endDate": "2026-03-24",
+    "allowLateJoin": true,
+    "inviteCode": "ABC123",
+    "createdAt": "2026-03-01T10:00:00",
+    "deadlineTime": "23:59:59",
+    "category": "STUDY",
+    "visibility": "PUBLIC"
+  },
+  "error": null
+}
+```
+
+**에러 응답**
+| HTTP | 코드 | 메시지 | 설명 |
+|------|------|--------|------|
+| 403 | CR009 | 크루장만 수정할 수 있습니다. | 비크루장 접근 |
+| 404 | CR001 | 크루를 찾을 수 없습니다. | 존재하지 않는 crewId |
+
+---
+
+### GET /crews/search (크루 검색)
+
+공개(PUBLIC) 크루를 검색한다. **비로그인 사용자도 조회 가능 (permitAll).**
+
+**요청 (Request)**
+```
+GET /crews/search?keyword=러닝&category=EXERCISE&page=0&size=20 HTTP/1.1
+```
+
+**쿼리 파라미터:**
+
+| 파라미터 | 필수 | 타입 | 기본값 | 설명 |
+|----------|------|------|--------|------|
+| `keyword` | X | String | - | 검색어 — 크루 이름/목표 LIKE 검색. 6자리 영숫자면 초대코드 exact match |
+| `category` | X | String | - | 카테고리 필터 — `EXERCISE` / `STUDY` / `LIFESTYLE` / `SELF_DEV` / `ETC` |
+| `page` | X | int | 0 | 페이지 번호 |
+| `size` | X | int | 20 | 페이지 크기 (최대 50) |
+
+**검색 조건:**
+- `visibility = PUBLIC`
+- AND (`status = RECRUITING` OR (`status = ACTIVE` AND `allowLateJoin = true` AND `endDate - today >= 6`))
+- 정렬: `createdAt DESC`
+
+**초대코드 검색 규칙:**
+- keyword가 6자리 영숫자(초대코드 형식)이면 `inviteCode` exact match 검색
+- 그 외 keyword는 크루 이름/목표에서 LIKE 검색
+- 초대코드 매칭은 visibility와 무관 (비공개 크루도 초대코드로 찾을 수 있음)
+
+**성공 응답 (200 OK)**
+```json
+{
+  "success": true,
+  "data": {
+    "crews": [
+      {
+        "id": "crew_123",
+        "name": "새벽 러닝 크루",
+        "goal": "매일 아침 5km 러닝",
+        "verificationContent": "러닝 완료 후 기록 인증",
+        "category": "EXERCISE",
+        "verificationType": "PHOTO",
+        "allowLateJoin": true,
+        "currentMembers": 3,
+        "maxMembers": 5,
+        "status": "RECRUITING",
+        "startDate": "2026-03-10",
+        "endDate": "2026-03-24",
+        "createdAt": "2026-03-01T10:00:00"
+      }
+    ],
+    "hasNext": false
+  },
+  "error": null
+}
+```
+
+**필드 설명:**
+- `crews`: 검색 결과 크루 목록
+- `hasNext`: 다음 페이지 존재 여부
+
+---
+
+### POST /crews/{crewId}/join (공개 크루 직접 가입)
+
+공개 크루에 직접 가입한다. **비공개 크루는 초대코드(POST /crews/join)로만 가입 가능.**
+
+**요청 (Request)**
+```
+POST /crews/{crewId}/join HTTP/1.1
+Authorization: Bearer <token>
+```
+
+Request body 없음 (crewId는 path parameter).
+
+**성공 응답 (201 Created)**
+```json
+{
+  "success": true,
+  "data": {
+    "userId": "1234567890",
+    "crewId": "crew_123",
+    "role": "MEMBER",
+    "currentMembers": 4,
+    "joinedAt": "2026-03-04T10:00:00Z"
+  },
+  "error": null
+}
+```
+
+**비즈니스 규칙:**
+- `visibility = PUBLIC`인 크루만 직접 가입 가능
+- `status = RECRUITING` 또는 (`status = ACTIVE` AND `allowLateJoin = true` AND 참여 마감 기한 이내)
+- 정원 미초과, 중복 참여 불가
+
+**에러 응답**
+
+| HTTP | 코드 | 메시지 | 설명 |
+|------|------|--------|------|
+| 400 | CR022 | 공개 크루만 직접 가입할 수 있습니다. | visibility=PRIVATE인 크루 |
+| 400 | CR003 | 모집 중인 크루가 아닙니다. | 크루 상태가 가입 불가 |
+| 400 | CR008 | 크루 참여 마감 기한이 지났습니다. | 중간 가입 기한 초과 |
+| 404 | CR001 | 크루를 찾을 수 없습니다. | 존재하지 않는 crewId |
+| 409 | CR002 | 크루 정원이 가득 찼습니다. | 정원 초과 |
+| 409 | CR004 | 이미 참여 중인 크루입니다. | 중복 참여 |
+
+**인증 요구사항:**
+
+| API | 인증 필요 |
+|-----|-----------|
+| GET /crews/search | X (permitAll) |
+| POST /crews/{crewId}/join | O (Bearer token) |
 
 ---
 

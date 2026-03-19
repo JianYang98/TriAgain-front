@@ -97,11 +97,13 @@ lib/
 │   │   │   ├── create_crew_screen.dart
 │   │   │   ├── crew_success_screen.dart
 │   │   │   ├── crew_confirm_screen.dart
-│   │   │   └── crew_detail_screen.dart
+│   │   │   ├── crew_detail_screen.dart
+│   │   │   └── crew_search_screen.dart
 │   │   └── widgets/
 │   │       ├── my_verification_tab.dart
 │   │       ├── member_status_tab.dart
-│   │       └── feed_tab.dart
+│   │       ├── feed_tab.dart
+│   │       └── search_crew_card.dart
 │   └── verification/            // 인증하기
 │       └── screens/
 │           └── verification_screen.dart
@@ -111,7 +113,8 @@ lib/
 │   ├── verification.dart
 │   └── mock_data.dart           // Mock 데이터
 ├── services/                    // API 서비스
-│   └── api_service.dart
+│   ├── api_service.dart
+│   └── crew_search_service.dart
 └── widgets/                     // 공통 위젯
     ├── app_button.dart
     ├── app_card.dart
@@ -127,11 +130,12 @@ lib/
 |------|------|------|------|
 | 1 | 로그인 | login_screen.dart | 로고 + 슬로건 + 카카오 버튼 |
 | 2 | 홈 | home_screen.dart | 크루 카드 목록 + 프로그레스바 + 버튼 |
-| 3 | 크루 만들기 | create_crew_screen.dart | 이름, 목표, 인원, 기간, 인증방식, 중간가입 |
+| 3 | 크루 만들기 | create_crew_screen.dart | 이름, 목표, 인원, 기간, 인증방식, 중간가입, 카테고리, 공개/비공개 |
 | 4 | 크루 생성 완료 | crew_success_screen.dart | 초대코드 + 복사/공유 버튼 |
 | 5 | 크루 상세 | crew_detail_screen.dart | 탭 3개 (나의 인증 / 참가자 현황 / 인증 피드) |
 | 6 | 인증하기 | verification_screen.dart | 사진 영역 + 텍스트 입력 + 인증 완료 |
 | 7 | 크루 확인 | crew_confirm_screen.dart | 초대코드 입력 후 크루 정보 확인 + 참여 |
+| 8 | 크루 검색 | crew_search_screen.dart | 검색바 + 카테고리 필터 + 결과 리스트 + 가입 |
 
 ---
 
@@ -142,6 +146,7 @@ lib/
 홈 → 크루 카드 클릭 → 크루 상세 (탭 3개)
 크루 상세 → 오늘 인증하기 → 인증하기 화면
 홈 → 초대코드 버튼 → 코드 입력 → 크루 확인 → 크루 참여 → 홈
+홈 → 크루 찾기 → 크루 검색 → 크루 카드 클릭 → 가입 → 홈
 ```
 
 ---

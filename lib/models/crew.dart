@@ -37,6 +37,59 @@ enum VerificationType {
   };
 }
 
+enum CrewCategory {
+  exercise,
+  study,
+  lifestyle,
+  selfDev,
+  etc;
+
+  factory CrewCategory.fromString(String value) {
+    return switch (value) {
+      'EXERCISE' => CrewCategory.exercise,
+      'STUDY' => CrewCategory.study,
+      'LIFESTYLE' => CrewCategory.lifestyle,
+      'SELF_DEV' => CrewCategory.selfDev,
+      'ETC' => CrewCategory.etc,
+      _ => throw ArgumentError('Unknown CrewCategory: $value'),
+    };
+  }
+
+  String toJson() => switch (this) {
+    CrewCategory.exercise => 'EXERCISE',
+    CrewCategory.study => 'STUDY',
+    CrewCategory.lifestyle => 'LIFESTYLE',
+    CrewCategory.selfDev => 'SELF_DEV',
+    CrewCategory.etc => 'ETC',
+  };
+
+  String get label => switch (this) {
+    CrewCategory.exercise => '운동',
+    CrewCategory.study => '공부',
+    CrewCategory.lifestyle => '생활습관',
+    CrewCategory.selfDev => '자기개발',
+    CrewCategory.etc => '기타',
+  };
+}
+
+enum CrewVisibility {
+  public,
+  private;
+
+  factory CrewVisibility.fromString(String value) {
+    return switch (value) {
+      'PUBLIC' => CrewVisibility.public,
+      'PRIVATE' => CrewVisibility.private,
+      _ => throw ArgumentError('Unknown CrewVisibility: $value'),
+    };
+  }
+
+  String toJson() => switch (this) {
+    CrewVisibility.public => 'PUBLIC',
+    CrewVisibility.private => 'PRIVATE',
+  };
+}
+
 class CrewSummary {
   final String id;
   final String name;
@@ -49,6 +102,8 @@ class CrewSummary {
   final DateTime endDate;
   final DateTime createdAt;
   final String? deadlineTime;
+  final CrewCategory? category;
+  final CrewVisibility? visibility;
 
   const CrewSummary({
     required this.id,
@@ -62,6 +117,8 @@ class CrewSummary {
     required this.endDate,
     required this.createdAt,
     this.deadlineTime,
+    this.category,
+    this.visibility,
   });
 
   factory CrewSummary.fromJson(Map<String, dynamic> json) {
@@ -78,6 +135,12 @@ class CrewSummary {
       endDate: DateTime.parse(json['endDate'] as String),
       createdAt: DateTime.parse(json['createdAt'] as String),
       deadlineTime: json['deadlineTime'] as String?,
+      category: json['category'] != null
+          ? CrewCategory.fromString(json['category'] as String)
+          : null,
+      visibility: json['visibility'] != null
+          ? CrewVisibility.fromString(json['visibility'] as String)
+          : null,
     );
   }
 }
@@ -160,6 +223,8 @@ class CrewDetail {
   final bool? joinable;
   final String? joinBlockedReason;
   final String? verificationContent;
+  final CrewCategory? category;
+  final CrewVisibility? visibility;
 
   const CrewDetail({
     required this.id,
@@ -180,6 +245,8 @@ class CrewDetail {
     this.joinable,
     this.joinBlockedReason,
     this.verificationContent,
+    this.category,
+    this.visibility,
   });
 
   factory CrewDetail.fromJson(Map<String, dynamic> json) {
@@ -207,6 +274,84 @@ class CrewDetail {
       joinable: json['joinable'] as bool?,
       joinBlockedReason: json['joinBlockedReason'] as String?,
       verificationContent: json['verificationContent'] as String?,
+      category: json['category'] != null
+          ? CrewCategory.fromString(json['category'] as String)
+          : null,
+      visibility: json['visibility'] != null
+          ? CrewVisibility.fromString(json['visibility'] as String)
+          : null,
+    );
+  }
+}
+
+class SearchCrewItem {
+  final String id;
+  final String name;
+  final String goal;
+  final String? verificationContent;
+  final CrewCategory? category;
+  final VerificationType verificationType;
+  final bool allowLateJoin;
+  final int currentMembers;
+  final int maxMembers;
+  final CrewStatus status;
+  final DateTime startDate;
+  final DateTime endDate;
+  final DateTime createdAt;
+
+  const SearchCrewItem({
+    required this.id,
+    required this.name,
+    required this.goal,
+    this.verificationContent,
+    this.category,
+    required this.verificationType,
+    required this.allowLateJoin,
+    required this.currentMembers,
+    required this.maxMembers,
+    required this.status,
+    required this.startDate,
+    required this.endDate,
+    required this.createdAt,
+  });
+
+  factory SearchCrewItem.fromJson(Map<String, dynamic> json) {
+    return SearchCrewItem(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      goal: json['goal'] as String,
+      verificationContent: json['verificationContent'] as String?,
+      category: json['category'] != null
+          ? CrewCategory.fromString(json['category'] as String)
+          : null,
+      verificationType:
+          VerificationType.fromString(json['verificationType'] as String),
+      allowLateJoin: json['allowLateJoin'] as bool,
+      currentMembers: json['currentMembers'] as int,
+      maxMembers: json['maxMembers'] as int,
+      status: CrewStatus.fromString(json['status'] as String),
+      startDate: DateTime.parse(json['startDate'] as String),
+      endDate: DateTime.parse(json['endDate'] as String),
+      createdAt: DateTime.parse(json['createdAt'] as String),
+    );
+  }
+}
+
+class SearchCrewResult {
+  final List<SearchCrewItem> crews;
+  final bool hasNext;
+
+  const SearchCrewResult({
+    required this.crews,
+    required this.hasNext,
+  });
+
+  factory SearchCrewResult.fromJson(Map<String, dynamic> json) {
+    return SearchCrewResult(
+      crews: (json['crews'] as List)
+          .map((e) => SearchCrewItem.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      hasNext: json['hasNext'] as bool,
     );
   }
 }

@@ -152,10 +152,10 @@ class _CrewDetailScreenState extends ConsumerState<CrewDetailScreen> {
                         color: AppColors.white,
                       ),
                     ),
-                    if (isLeader && isRecruiting)
+                    if ((isLeader || isMember) && isRecruiting)
                       IconButton(
                         onPressed: () =>
-                            _showManageSheet(context, crew),
+                            _showManageSheet(context, crew, isLeader: isLeader),
                         icon: const Icon(
                           Icons.more_vert,
                           color: AppColors.white,
@@ -237,24 +237,6 @@ class _CrewDetailScreenState extends ConsumerState<CrewDetailScreen> {
                 ),
               ),
 
-              // 크루 탈퇴 텍스트 (MEMBER + RECRUITING)
-              if (isMember && isRecruiting)
-                Padding(
-                  padding: const EdgeInsets.only(
-                    bottom: AppSizes.paddingMD,
-                    top: AppSizes.paddingXS,
-                  ),
-                  child: GestureDetector(
-                    onTap: () => _showLeaveDialog(context, crew.name),
-                    child: Text(
-                      '크루 탈퇴',
-                      style: AppTextStyles.caption.copyWith(
-                        color: AppColors.grey3,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                ),
             ],
           ),
         ),
@@ -271,12 +253,13 @@ class _CrewDetailScreenState extends ConsumerState<CrewDetailScreen> {
     );
   }
 
-  void _showManageSheet(BuildContext context, CrewDetail crew) {
+  void _showManageSheet(BuildContext context, CrewDetail crew, {required bool isLeader}) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       builder: (_) => CrewManageBottomSheet(
         currentMembers: crew.currentMembers,
+        isLeader: isLeader,
         onEdit: () {
           Navigator.of(context).pop();
           context.push('/crew/${widget.crewId}/edit');
@@ -284,6 +267,10 @@ class _CrewDetailScreenState extends ConsumerState<CrewDetailScreen> {
         onDelete: () {
           Navigator.of(context).pop();
           _showDeleteDialog(context, crew.name);
+        },
+        onLeave: () {
+          Navigator.of(context).pop();
+          _showLeaveDialog(context, crew.name);
         },
       ),
     );
@@ -357,7 +344,7 @@ class _CrewDetailScreenState extends ConsumerState<CrewDetailScreen> {
           style: AppTextStyles.heading3.copyWith(color: AppColors.white),
         ),
         content: Text(
-          '탈퇴 후 다시 초대코드로 가입할 수 있습니다.',
+          '크루 시작 전에만 탈퇴할 수 있습니다.',
           style: AppTextStyles.body2.copyWith(color: AppColors.grey3),
         ),
         actions: [

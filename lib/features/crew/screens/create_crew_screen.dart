@@ -386,16 +386,16 @@ class _CreateCrewScreenState extends ConsumerState<CreateCrewScreen> {
                         ),
                         const SizedBox(height: 4),
                         Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
+                          spacing: 6,
+                          runSpacing: 6,
                           children: CrewCategory.values.map((cat) {
                             final isSelected = _category == cat;
                             return GestureDetector(
                               onTap: () => setState(() => _category = cat),
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 10,
+                                  horizontal: 12,
+                                  vertical: 8,
                                 ),
                                 decoration: BoxDecoration(
                                   color: isSelected ? AppColors.main : AppColors.card,

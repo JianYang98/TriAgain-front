@@ -159,7 +159,7 @@ class CrewInfoBottomSheet extends StatelessWidget {
                         SharePlus.instance.share(ShareParams(text: message));
                       },
                       icon: const Icon(Icons.share, size: 18),
-                      label: const Text('초대 메시지 공유'),
+                      label: const Text('친구 공유'),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.main,
                         foregroundColor: AppColors.white,

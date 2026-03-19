@@ -147,25 +147,52 @@ class HomeScreen extends ConsumerWidget {
                 onPressed: () => context.push('/crew/create'),
               ),
               const SizedBox(height: AppSizes.paddingSM),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: OutlinedButton(
-                  onPressed: () => _showInviteCodeDialog(context, ref),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: AppColors.grey1),
-                    backgroundColor: AppColors.background,
-                    shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(AppSizes.buttonRadius),
+              Row(
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 52,
+                      child: OutlinedButton(
+                        onPressed: () => context.push('/crew/search'),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: AppColors.grey1),
+                          backgroundColor: AppColors.background,
+                          shape: RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(AppSizes.buttonRadius),
+                          ),
+                        ),
+                        child: Text(
+                          '크루 찾기 🔍',
+                          style: AppTextStyles.button
+                              .copyWith(color: AppColors.grey4),
+                        ),
+                      ),
                     ),
                   ),
-                  child: Text(
-                    '초대코드',
-                    style:
-                        AppTextStyles.button.copyWith(color: AppColors.grey4),
+                  const SizedBox(width: AppSizes.paddingSM),
+                  Expanded(
+                    child: SizedBox(
+                      height: 52,
+                      child: OutlinedButton(
+                        onPressed: () => _showInviteCodeDialog(context, ref),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: AppColors.grey1),
+                          backgroundColor: AppColors.background,
+                          shape: RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(AppSizes.buttonRadius),
+                          ),
+                        ),
+                        child: Text(
+                          '초대코드 🔑',
+                          style: AppTextStyles.button
+                              .copyWith(color: AppColors.grey4),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
               const SizedBox(height: AppSizes.paddingMD),
             ],

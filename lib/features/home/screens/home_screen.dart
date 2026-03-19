@@ -23,16 +23,22 @@ class HomeScreen extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: AppColors.background,
         automaticallyImplyLeading: false,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        title: Row(
           children: [
-            Text(
-              'TriAgain',
-              style: AppTextStyles.heading1.copyWith(color: AppColors.white),
-            ),
-            Text(
-              'Start Small. Try Again',
-              style: AppTextStyles.body1.copyWith(color: AppColors.grey3),
+            Image.asset('images/logo.png', height: 48),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'TriAgain',
+                  style: AppTextStyles.heading1.copyWith(color: AppColors.white),
+                ),
+                Text(
+                  'Start Small. Try Again',
+                  style: AppTextStyles.body1.copyWith(color: AppColors.grey3),
+                ),
+              ],
             ),
           ],
         ),

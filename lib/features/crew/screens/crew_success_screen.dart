@@ -48,12 +48,12 @@ class CrewSuccessScreen extends StatelessWidget {
                   style:
                       AppTextStyles.body1.copyWith(color: AppColors.grey3),
                 ),
+                const SizedBox(height: AppSizes.paddingMD),
+                _buildStartDateTag(),
                 const SizedBox(height: AppSizes.paddingXL),
                 _buildInviteCodeBox(),
                 const SizedBox(height: AppSizes.paddingMD),
                 _buildButtonRow(context),
-                const SizedBox(height: AppSizes.paddingMD),
-                _buildStartDateBox(),
                 const SizedBox(height: AppSizes.paddingLG),
                 TextButton(
                   onPressed: () => context.go('/home'),
@@ -121,7 +121,7 @@ class CrewSuccessScreen extends StatelessWidget {
             child: ElevatedButton.icon(
               onPressed: () => _shareInviteMessage(context),
               icon: const Icon(Icons.share, size: 18),
-              label: const Text('초대 메시지 공유'),
+              label: const Text('친구 공유'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.main,
                 foregroundColor: AppColors.white,
@@ -138,20 +138,16 @@ class CrewSuccessScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStartDateBox() {
+  Widget _buildStartDateTag() {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: AppSizes.paddingMD),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.card,
         border: Border.all(color: AppColors.grey1),
-        borderRadius: BorderRadius.circular(AppSizes.cardRadius),
+        borderRadius: BorderRadius.circular(AppSizes.badgeRadius),
       ),
-      child: Center(
-        child: Text(
-          '크루 시작: $startDate',
-          style: AppTextStyles.body1.copyWith(color: AppColors.grey4),
-        ),
+      child: Text(
+        '🚩 시작일 | $startDate',
+        style: AppTextStyles.body2.copyWith(color: AppColors.grey4),
       ),
     );
   }

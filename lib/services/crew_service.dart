@@ -38,6 +38,8 @@ class CrewService {
     required DateTime startDate,
     required DateTime endDate,
     required bool allowLateJoin,
+    required CrewCategory category,
+    CrewVisibility visibility = CrewVisibility.private,
     String? deadlineTime,
   }) async {
     final response = await _apiClient.post<CreateCrewResult>(
@@ -51,6 +53,8 @@ class CrewService {
         'startDate': _formatDate(startDate),
         'endDate': _formatDate(endDate),
         'allowLateJoin': allowLateJoin,
+        'category': category.toJson(),
+        'visibility': visibility.toJson(),
         if (deadlineTime != null) 'deadlineTime': deadlineTime,
       },
       fromData: (json) =>
@@ -87,6 +91,23 @@ class CrewService {
 
   Future<void> deleteCrew(String crewId) async {
     await _apiClient.delete('/crews/$crewId');
+  }
+
+  Future<CrewDetail> getCrewPreview(String crewId) async {
+    final response = await _apiClient.get<CrewDetail>(
+      '/crews/$crewId/preview',
+      fromData: (json) => CrewDetail.fromJson(json as Map<String, dynamic>),
+    );
+    return response.data!;
+  }
+
+  Future<JoinCrewResult> joinCrewById(String crewId) async {
+    final response = await _apiClient.post<JoinCrewResult>(
+      '/crews/$crewId/join',
+      fromData: (json) =>
+          JoinCrewResult.fromJson(json as Map<String, dynamic>),
+    );
+    return response.data!;
   }
 
   Future<void> leaveCrew(String crewId) async {

@@ -21,3 +21,9 @@ final crewByInviteCodeProvider =
   final crewService = ref.watch(crewServiceProvider);
   return crewService.getCrewByInviteCode(inviteCode);
 });
+
+final crewPreviewProvider =
+    FutureProvider.family<CrewDetail, String>((ref, crewId) async {
+  final crewService = ref.watch(crewServiceProvider);
+  return crewService.getCrewPreview(crewId);
+});

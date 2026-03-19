@@ -5,14 +5,18 @@ import 'package:triagain/core/constants/app_text_styles.dart';
 
 class CrewManageBottomSheet extends StatelessWidget {
   final int currentMembers;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
+  final bool isLeader;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
+  final VoidCallback? onLeave;
 
   const CrewManageBottomSheet({
     super.key,
     required this.currentMembers,
-    required this.onEdit,
-    required this.onDelete,
+    this.isLeader = true,
+    this.onEdit,
+    this.onDelete,
+    this.onLeave,
   });
 
   @override
@@ -40,37 +44,49 @@ class CrewManageBottomSheet extends StatelessWidget {
             ),
           ),
 
-          // 크루 수정
-          ListTile(
-            leading: const Icon(Icons.edit, color: AppColors.white),
-            title: Text(
-              '크루 수정',
-              style: AppTextStyles.body1.copyWith(color: AppColors.white),
+          if (isLeader) ...[
+            // 크루 수정
+            ListTile(
+              leading: const Icon(Icons.edit, color: AppColors.white),
+              title: Text(
+                '크루 수정',
+                style: AppTextStyles.body1.copyWith(color: AppColors.white),
+              ),
+              onTap: onEdit,
             ),
-            onTap: onEdit,
-          ),
 
-          // 크루 삭제
-          ListTile(
-            leading: Icon(
-              Icons.delete_outline,
-              color: canDelete ? AppColors.error : AppColors.grey2,
-            ),
-            title: Text(
-              '크루 삭제',
-              style: AppTextStyles.body1.copyWith(
+            // 크루 삭제
+            ListTile(
+              leading: Icon(
+                Icons.delete_outline,
                 color: canDelete ? AppColors.error : AppColors.grey2,
               ),
+              title: Text(
+                '크루 삭제',
+                style: AppTextStyles.body1.copyWith(
+                  color: canDelete ? AppColors.error : AppColors.grey2,
+                ),
+              ),
+              subtitle: canDelete
+                  ? null
+                  : Text(
+                      '크루원이 있어 삭제할 수 없습니다',
+                      style:
+                          AppTextStyles.caption.copyWith(color: AppColors.grey3),
+                    ),
+              onTap: canDelete ? onDelete : null,
             ),
-            subtitle: canDelete
-                ? null
-                : Text(
-                    '크루원이 있어 삭제할 수 없습니다',
-                    style:
-                        AppTextStyles.caption.copyWith(color: AppColors.grey3),
-                  ),
-            onTap: canDelete ? onDelete : null,
-          ),
+          ],
+
+          if (!isLeader && onLeave != null)
+            ListTile(
+              leading: const Icon(Icons.logout, color: AppColors.error),
+              title: Text(
+                '크루 탈퇴',
+                style: AppTextStyles.body1.copyWith(color: AppColors.error),
+              ),
+              onTap: onLeave,
+            ),
 
           SizedBox(height: AppSizes.paddingLG + MediaQuery.of(context).padding.bottom),
         ],

@@ -6,8 +6,10 @@ import 'package:triagain/core/constants/app_sizes.dart';
 import 'package:triagain/core/constants/app_text_styles.dart';
 import 'package:triagain/core/network/api_exception.dart';
 import 'package:triagain/providers/crew_provider.dart';
+import 'package:triagain/models/crew.dart';
 import 'package:triagain/services/crew_service.dart';
 import 'package:triagain/widgets/app_button.dart';
+import 'package:triagain/widgets/toggle_selector.dart';
 
 class CrewEditScreen extends ConsumerStatefulWidget {
   final String crewId;
@@ -29,6 +31,10 @@ class _CrewEditScreenState extends ConsumerState<CrewEditScreen> {
   String _originalName = '';
   String _originalGoal = '';
   String _originalVerificationContent = '';
+  CrewCategory? _category;
+  CrewCategory? _originalCategory;
+  bool? _isPublic;
+  bool? _originalIsPublic;
 
   // 사용자가 수정한 적 있는 필드 추적
   bool _nameTouched = false;
@@ -85,7 +91,7 @@ class _CrewEditScreenState extends ConsumerState<CrewEditScreen> {
     final name = _nameController.text.trim();
     final goal = _goalController.text.trim();
     final vc = _verificationContentController.text.trim();
-    return name != _originalName || goal != _originalGoal || vc != _originalVerificationContent;
+    return name != _originalName || goal != _originalGoal || vc != _originalVerificationContent || _category != _originalCategory || _isPublic != _originalIsPublic;
   }
 
   bool get _canSubmit => _hasChanges && !_hasError && !_isSubmitting;
@@ -114,6 +120,12 @@ class _CrewEditScreenState extends ConsumerState<CrewEditScreen> {
       if (goal != _originalGoal) changes['goal'] = goal;
       if (vc != _originalVerificationContent) {
         changes['verificationContent'] = vc;
+      }
+      if (_category != _originalCategory && _category != null) {
+        changes['category'] = _category!.toJson();
+      }
+      if (_isPublic != _originalIsPublic && _isPublic != null) {
+        changes['visibility'] = _isPublic! ? 'PUBLIC' : 'PRIVATE';
       }
 
       await crewService.editCrew(widget.crewId, changes);
@@ -151,6 +163,15 @@ class _CrewEditScreenState extends ConsumerState<CrewEditScreen> {
           _nameController.text = _originalName;
           _goalController.text = _originalGoal;
           _verificationContentController.text = _originalVerificationContent;
+
+          _originalCategory = crew.category;
+          _category = crew.category;
+          _originalIsPublic = crew.visibility == CrewVisibility.public
+              ? true
+              : crew.visibility == CrewVisibility.private
+                  ? false
+                  : null;
+          _isPublic = _originalIsPublic;
 
           _initialized = true;
         }
@@ -395,6 +416,75 @@ class _CrewEditScreenState extends ConsumerState<CrewEditScreen> {
                               style: AppTextStyles.caption.copyWith(color: AppColors.error),
                             ),
                           ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSizes.paddingMD),
+
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '카테고리',
+                          style: AppTextStyles.caption.copyWith(color: AppColors.grey4),
+                        ),
+                        const SizedBox(height: 4),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: CrewCategory.values.map((cat) {
+                            final isSelected = _category == cat;
+                            return GestureDetector(
+                              onTap: () => setState(() => _category = cat),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isSelected ? AppColors.main : AppColors.card,
+                                  borderRadius: BorderRadius.circular(AppSizes.buttonRadius),
+                                  border: isSelected
+                                      ? null
+                                      : Border.all(color: AppColors.grey1),
+                                ),
+                                child: Text(
+                                  cat.label,
+                                  style: AppTextStyles.body2.copyWith(
+                                    color: isSelected ? AppColors.white : AppColors.grey3,
+                                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSizes.paddingMD),
+
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '공개 설정',
+                          style: AppTextStyles.caption.copyWith(color: AppColors.grey4),
+                        ),
+                        const SizedBox(height: 4),
+                        ToggleSelector<bool>(
+                          items: const [false, true],
+                          selectedItem: _isPublic,
+                          labelBuilder: (value) => value ? '공개' : '비공개',
+                          onChanged: (value) {
+                            setState(() => _isPublic = value);
+                          },
+                        ),
+                        if (_isPublic == true) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            '공개 크루는 검색을 통해 누구나 찾을 수 있어요',
+                            style: AppTextStyles.caption.copyWith(color: AppColors.grey3),
+                          ),
+                        ],
                       ],
                     ),
                     const SizedBox(height: AppSizes.paddingLG),

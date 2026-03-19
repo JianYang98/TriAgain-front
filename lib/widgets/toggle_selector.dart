@@ -5,7 +5,7 @@ import 'package:triagain/core/constants/app_text_styles.dart';
 
 class ToggleSelector<T> extends StatelessWidget {
   final List<T> items;
-  final T selectedItem;
+  final T? selectedItem;
   final String Function(T) labelBuilder;
   final ValueChanged<T> onChanged;
 
